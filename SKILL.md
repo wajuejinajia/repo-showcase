@@ -1,9 +1,9 @@
 ---
-name: project-showcase
+name: repo-showcase
 description: Build a source-backed, dependency-free showcase website for the current project repository in a chosen visual style. Use for a project homepage, landing page, repository showcase, or GitHub Pages site; do not use for product apps, dashboards, or multi-page documentation sites.
 ---
 
-# Project Showcase
+# Repo Showcase
 
 Turn a code repository into a small, distinctive project website without inventing product claims. The default deliverable is a deployable `site/index.html` with local assets and no build step.
 
@@ -24,7 +24,7 @@ Run the analyzer against the target repository:
 bash <skill-root>/scripts/analyze-repo.sh <target-repository>
 ```
 
-It writes `<target-repository>/.project-showcase/facts.json`. Read it, then inspect the README, relevant configuration, and existing assets as needed. The manifest is an index, not marketing proof.
+It writes `<target-repository>/.repo-showcase/facts.json`. Read it, then inspect the README, relevant configuration, and existing assets as needed. The manifest is an index, not marketing proof.
 
 Build a compact internal evidence map before generating content. Every public claim, command, metric, and link must have a source file and line (or be omitted). Do not infer capabilities from a dependency name, write fake social proof, invent metrics, or fill missing sections with placeholders.
 

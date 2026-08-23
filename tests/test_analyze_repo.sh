@@ -2,11 +2,13 @@
 set -euo pipefail
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd -P)
-FIXTURE="$ROOT/tests/fixtures/node-project"
-OUTPUT=$(mktemp -d)/facts.json
-trap 'rm -rf "${OUTPUT%/*}"' EXIT
+TEMP=$(mktemp -d)
+FIXTURE="$TEMP/node-project"
+OUTPUT="$FIXTURE/.repo-showcase/facts.json"
+trap 'rm -rf "$TEMP"' EXIT
 
-bash "$ROOT/scripts/analyze-repo.sh" "$FIXTURE" --output "$OUTPUT" >/dev/null
+cp -R "$ROOT/tests/fixtures/node-project" "$FIXTURE"
+bash "$ROOT/scripts/analyze-repo.sh" "$FIXTURE" >/dev/null
 python3 - "$OUTPUT" <<'PY'
 import json
 import sys

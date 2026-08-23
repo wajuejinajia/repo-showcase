@@ -1,6 +1,6 @@
-# project-showcase
+# repo-showcase
 
-`project-showcase` is an Agent Skill that turns a code repository into a source-backed, style-led project website. It creates a dependency-free static page by default, suitable for a repository homepage or GitHub Pages.
+`repo-showcase` is an Agent Skill that turns a code repository into a source-backed, style-led project website. It creates a dependency-free static page by default, suitable for a repository homepage or GitHub Pages.
 
 It is designed for projects that have code and a README but no public introduction site: the agent extracts verifiable project facts, helps choose an appropriate visual system, creates a portable static site, and checks it before handoff.
 
@@ -26,9 +26,9 @@ README files serve developers well, but they are rarely a clear project introduc
 Clone the folder into the skills directory supported by your agent. Common project-local paths include:
 
 ```bash
-git clone https://github.com/wajuejinajia/project-showcase .agents/skills/project-showcase
-git clone https://github.com/wajuejinajia/project-showcase .claude/skills/project-showcase
-git clone https://github.com/wajuejinajia/project-showcase .opencode/skills/project-showcase
+git clone https://github.com/wajuejinajia/project-showcase .agents/skills/repo-showcase
+git clone https://github.com/wajuejinajia/project-showcase .claude/skills/repo-showcase
+git clone https://github.com/wajuejinajia/project-showcase .opencode/skills/repo-showcase
 ```
 
 Other agents can use the same folder whenever they support `SKILL.md`-style skills. The core runtime only needs Bash and Python 3; no Node modules or browser package is required for its deterministic checks.
@@ -46,10 +46,10 @@ Create a project homepage in tech-futuristic style and verify it locally. Do not
 ```
 
 ```text
-Use project-showcase to build an Apple-minimal introduction site, then prepare it for GitHub Pages.
+Use repo-showcase to build an Apple-minimal introduction site, then prepare it for GitHub Pages.
 ```
 
-The workflow writes a fact index to `.project-showcase/facts.json`, produces `site/index.html` by default, and validates the output with:
+The workflow writes a fact index to `.repo-showcase/facts.json`, produces `site/index.html` by default, and validates the output with:
 
 ```bash
 python3 <skill-root>/scripts/validate-site.py site

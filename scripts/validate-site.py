@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate a dependency-free project-showcase HTML site using only Python's standard library."""
+"""Validate a dependency-free repo-showcase HTML site using only Python's standard library."""
 from __future__ import annotations
 
 import argparse

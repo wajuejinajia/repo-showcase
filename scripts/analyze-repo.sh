@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Collect source-backed repository facts for project-showcase.
+# Collect source-backed repository facts for repo-showcase.
 # Usage: bash analyze-repo.sh [target-repo] [--output /path/to/facts.json]
 set -euo pipefail
 
@@ -30,7 +30,7 @@ done
 
 [[ -d "$TARGET" ]] || { echo "Target repository does not exist: $TARGET" >&2; exit 2; }
 TARGET=$(cd "$TARGET" && pwd -P)
-OUTPUT=${OUTPUT:-"$TARGET/.project-showcase/facts.json"}
+OUTPUT=${OUTPUT:-"$TARGET/.repo-showcase/facts.json"}
 mkdir -p "$(dirname "$OUTPUT")"
 
 remote=$(git -C "$TARGET" config --get remote.origin.url 2>/dev/null || true)
@@ -116,7 +116,7 @@ assets = []
 for path in root.rglob("*"):
     if not path.is_file() or path.suffix.lower() not in image_suffixes:
         continue
-    if any(part in {".git", "node_modules", "vendor", ".project-showcase"} for part in path.parts):
+    if any(part in {".git", "node_modules", "vendor", ".repo-showcase"} for part in path.parts):
         continue
     assets.append(str(path.relative_to(root)))
 
