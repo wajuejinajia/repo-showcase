@@ -1,88 +1,90 @@
-<!DOCTYPE html>
-<!-- project-showcase 单文件骨架：生成时按所选风格填充 <style> 与各区块内容 -->
-<html lang="zh-CN">
+<!doctype html>
+<!-- Start from this file. Replace every {{PLACEHOLDER}} before delivery. -->
+<html lang="{{LANG}}">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{{PROJECT_NAME}} — {{TAGLINE}}</title>
-<meta name="description" content="{{DESCRIPTION}}">
-<!-- 所选风格要求 Google Fonts 时在此引入 -->
-<style>
-  /* ===== Reset ===== */
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html { scroll-behavior: smooth; }
-  img { max-width: 100%; display: block; }
-  a { color: inherit; }
-  body { font-family: var(--font); background: var(--bg); color: var(--text); }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="{{DESCRIPTION}}">
+  <title>{{PROJECT_NAME}} — {{TAGLINE}}</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; font-family: var(--font, system-ui, sans-serif); background: var(--bg, #fff); color: var(--text, #111); }
+    img { display: block; max-width: 100%; }
+    a { color: inherit; }
+    :focus-visible { outline: 3px solid var(--focus, #2563eb); outline-offset: 3px; }
 
-  /* ===== 通用：滚动淡入（风格文件禁用时可删除） ===== */
-  .reveal { opacity: 0; transform: translateY(24px); transition: opacity .7s ease-out, transform .7s ease-out; }
-  .reveal.visible { opacity: 1; transform: none; }
+    /* Keep only the shared helpers allowed by the selected style. */
+    .reveal { opacity: 0; transform: translateY(24px); transition: opacity .7s ease-out, transform .7s ease-out; }
+    .reveal.visible { opacity: 1; transform: none; }
+    .codeblock { position: relative; }
+    .copy-btn { cursor: pointer; }
 
-  /* ===== 通用：代码块 + 复制按钮 ===== */
-  .codeblock { position: relative; }
-  .codeblock .copy-btn {
-    position: absolute; top: 10px; right: 10px; cursor: pointer;
-    border: 1px solid currentColor; background: transparent; color: inherit;
-    font: inherit; font-size: 12px; padding: 4px 10px; opacity: .6;
-  }
-  .codeblock .copy-btn:hover { opacity: 1; }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+      .reveal { opacity: 1; transform: none; }
+    }
 
-  /* ===== 在此按风格文件编写：导航 / Hero / 特性 / 展示 / 快速开始 / Footer ===== */
-</style>
+    /* Add the selected style's tokens and component rules below. */
+  </style>
 </head>
 <body>
+  <nav aria-label="Primary navigation">
+    <!-- Project name, supported section anchors, and repository link. -->
+  </nav>
 
-<nav>
-  <!-- logo（项目名）+ 4-5 个锚点链接 + GitHub 链接 -->
-</nav>
+  <main>
+    <header class="hero">
+      <h1>{{PROJECT_NAME}}</h1>
+      <p>{{TAGLINE}}</p>
+      <!-- Use only CTAs backed by repository information. -->
+    </header>
 
-<header class="hero">
-  <h1>{{PROJECT_NAME}}</h1>
-  <p class="tagline">{{TAGLINE}}</p>
-  <div class="cta">
-    <a class="btn-primary" href="{{GITHUB_URL}}">GitHub</a>
-    <a class="btn-secondary" href="#quickstart">快速开始</a>
-  </div>
-</header>
+    <!-- Add evidence-backed sections as appropriate. -->
+  </main>
 
-<section id="features">
-  <!-- 3-6 个特性卡片，来自 README 真实内容 -->
-</section>
+  <footer>
+    <!-- License, author, repository link, and year only when sourced. -->
+  </footer>
 
-<section id="showcase">
-  <!-- 截图 / demo / 代码示例；无素材则跳过 -->
-</section>
+  <script>
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!reducedMotion && 'IntersectionObserver' in window) {
+      const observer = new IntersectionObserver(entries => entries.forEach(entry => {
+        if (entry.isIntersecting) { entry.target.classList.add('visible'); observer.unobserve(entry.target); }
+      }), { threshold: 0.15 });
+      document.querySelectorAll('.reveal').forEach(element => observer.observe(element));
+    } else {
+      document.querySelectorAll('.reveal').forEach(element => element.classList.add('visible'));
+    }
 
-<section id="quickstart">
-  <h2>快速开始</h2>
-  <div class="codeblock">
-    <pre><code id="install-cmd">{{INSTALL_COMMAND}}</code></pre>
-    <button class="copy-btn" data-copy="#install-cmd">复制</button>
-  </div>
-  <!-- 最小使用示例 -->
-</section>
+    async function copyText(text) {
+      try {
+        if (navigator.clipboard?.writeText && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return true;
+        }
+      } catch (_) { /* Fall through to the local-file fallback. */ }
+      const area = document.createElement('textarea');
+      area.value = text;
+      area.setAttribute('readonly', '');
+      area.style.position = 'fixed';
+      area.style.opacity = '0';
+      document.body.append(area);
+      area.select();
+      const copied = document.execCommand('copy');
+      area.remove();
+      return copied;
+    }
 
-<footer>
-  <!-- License · 作者 · 仓库链接 · © {{YEAR}} -->
-</footer>
-
-<script>
-  // 滚动淡入
-  const io = new IntersectionObserver(es => es.forEach(e => {
-    if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); }
-  }), { threshold: 0.15 });
-  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
-
-  // 复制按钮
-  document.querySelectorAll('.copy-btn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const src = document.querySelector(btn.dataset.copy);
-      await navigator.clipboard.writeText(src.textContent.trim());
-      const old = btn.textContent; btn.textContent = '已复制 ✓';
-      setTimeout(() => btn.textContent = old, 1500);
-    });
-  });
-</script>
+    document.querySelectorAll('[data-copy]').forEach(button => button.addEventListener('click', async () => {
+      const source = document.querySelector(button.dataset.copy);
+      if (!source) return;
+      const original = button.textContent;
+      button.textContent = await copyText(source.textContent.trim()) ? 'Copied' : 'Copy manually';
+      setTimeout(() => { button.textContent = original; }, 1800);
+    }));
+  </script>
 </body>
 </html>

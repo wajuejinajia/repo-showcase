@@ -1,70 +1,76 @@
 # project-showcase
 
-一个 AI agent skill：为任意代码仓库快速生成风格化的项目介绍网站。
+`project-showcase` is an Agent Skill that turns a code repository into a source-backed, style-led project website. It creates a dependency-free static page by default, suitable for a repository homepage or GitHub Pages.
 
-在项目仓库里引入这个 skill，说一句"给这个项目建个介绍网站"，agent 就会分析仓库、让你挑选视觉风格、生成零依赖的单文件 HTML，并可直接部署到 GitHub Pages。
+It is designed for projects that have code and a README but no public introduction site: the agent extracts verifiable project facts, helps choose an appropriate visual system, creates a portable static site, and checks it before handoff.
 
-## 内置 8 种风格
+## Why this exists
 
-| 风格 | 气质 | 适合项目 |
-|------|------|---------|
-| Apple 官网风 | 大留白、超大标题、滚动叙事 | 硬件/产品类、设计工具 |
-| 极简清爽风 | 干净克制、内容优先 | 库、框架、效率工具 |
-| 科技未来风 | 深色精密、数据感 | 基础设施、性能工具、AI |
-| 赛博霓虹风 | 霓虹发光、故障艺术、炫酷 | 想要强视觉冲击的项目 |
-| 游戏街机风 | 像素风、游戏 UI、趣味 | 游戏项目、娱乐应用 |
-| 玻璃拟态风 | 毛玻璃、渐变光斑、轻盈 | 设计系统、桌面/移动应用 |
-| 粗野主义风 | 硬边框、高对比、反常规 | 创意工具、个性品牌 |
-| 终端黑客风 | 等宽字体、命令行隐喻 | CLI 工具、开发库 |
+README files serve developers well, but they are rarely a clear project introduction for users, collaborators, or evaluators. Existing AI landing-page generators can turn briefs or README content into pages; this skill is differentiated by working inside the target repository, keeping claims traceable to source, offering distinct visual systems, and producing a self-contained static result.
 
-风格库可扩展：新增一个 `styles/<name>.md` 并在 SKILL.md 菜单登记即可。
+## Included styles
 
-## 安装
+| Style | Suitable projects |
+|---|---|
+| Apple minimal | Products and design tools |
+| Minimal clean | Libraries and frameworks |
+| Tech futuristic | AI, infra, performance tools |
+| Cyberpunk neon | High-impact creative work |
+| Gaming arcade | Games and playful projects |
+| Glassmorphism | Apps and design systems |
+| Brutalist | Creative tools and expressive brands |
+| Terminal hacker | CLIs and developer tools |
 
-### Claude Code
+## Install
+
+Clone the folder into the skills directory supported by your agent. Common project-local paths include:
 
 ```bash
-# 克隆到项目（随仓库分发）
+git clone https://github.com/wajuejinajia/project-showcase .agents/skills/project-showcase
 git clone https://github.com/wajuejinajia/project-showcase .claude/skills/project-showcase
-
-# 或全局安装
-git clone https://github.com/wajuejinajia/project-showcase ~/.claude/skills/project-showcase
-```
-
-### opencode
-
-```bash
 git clone https://github.com/wajuejinajia/project-showcase .opencode/skills/project-showcase
 ```
 
-### 其他兼容 SKILL.md 的 agent
+Other agents can use the same folder whenever they support `SKILL.md`-style skills. The core runtime only needs Bash and Python 3; no Node modules or browser package is required for its deterministic checks.
 
-把整个目录放进 agent 的 skills 搜索路径即可（标准 Agent Skills 格式）。
+## Use
 
-## 使用
+In a target repository, ask your agent for example:
 
-在项目仓库中启动 agent，然后：
-
-```
-> 给这个项目搭一个介绍网站，用科技未来风
-> 帮我推荐一个风格，做个项目主页
-> 建个介绍网站，风格像 Apple 官网那样，部署到 GitHub Pages
+```text
+Build a project showcase site for this repository. Recommend a style first.
 ```
 
-## 工作流程
+```text
+Create a project homepage in tech-futuristic style and verify it locally. Do not deploy it.
+```
 
-1. **分析仓库** — `scripts/analyze-repo.sh` 收集项目名、描述、语言、README、截图
-2. **选择风格** — 展示风格菜单，或根据项目类型推荐
-3. **生成网站** — 零依赖单文件 `site/index.html`，内容全部来自仓库真实信息
-4. **本地验证** — 启动预览，检查桌面/移动端布局与交互
-5. **部署**（可选）— GitHub Pages / `/docs` 目录 / 直接本地打开
+```text
+Use project-showcase to build an Apple-minimal introduction site, then prepare it for GitHub Pages.
+```
 
-## 设计原则
+The workflow writes a fact index to `.project-showcase/facts.json`, produces `site/index.html` by default, and validates the output with:
 
-- **零依赖**：默认单文件 HTML，无构建步骤、无 npm、无 CDN
-- **不编造**：所有文案来自仓库真实信息，禁止虚构功能和数据
-- **可验证**：生成后必须本地预览检查，不交付未验证的网站
-- **可扩展**：风格即文件，照格式新增即可
+```bash
+python3 <skill-root>/scripts/validate-site.py site
+```
+
+## Design principles
+
+- Source-backed copy: every claim is traceable to repository material or omitted.
+- Portable output: local assets and system fonts by default, no build step or CDN.
+- Choice without genericness: styles define typography, composition, motion, and constraints—not just colors.
+- Honest verification: static checks always run; visual review is reported separately when a browser is available.
+- Explicit publishing: deployment and remote changes happen only on request.
+
+## Development
+
+Run the built-in smoke tests:
+
+```bash
+bash tests/test_analyze_repo.sh
+bash tests/test_validate_site.sh
+```
 
 ## License
 

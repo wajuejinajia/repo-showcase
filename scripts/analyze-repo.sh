@@ -1,90 +1,150 @@
 #!/usr/bin/env bash
-# analyze-repo.sh — 收集当前仓库的关键信息，供 project-showcase skill 生成网站
-# 用法: bash analyze-repo.sh [repo_path]   默认当前目录
+# Collect source-backed repository facts for project-showcase.
+# Usage: bash analyze-repo.sh [target-repo] [--output /path/to/facts.json]
 set -euo pipefail
 
-REPO="${1:-.}"
-cd "$REPO"
+TARGET="."
+OUTPUT=""
 
-section() { printf '\n\033[1;36m=== %s ===\033[0m\n' "$1"; }
-
-section "基本信息"
-name=$(basename "$(pwd)")
-git_origin=$(git config --get remote.origin.url 2>/dev/null || echo "无")
-echo "项目名: $name"
-echo "Git remote: $git_origin"
-
-# 描述：优先 GitHub API，其次各配置文件
-desc=""
-if [[ "$git_origin" == *github.com* ]]; then
-  slug=$(echo "$git_origin" | sed -E 's#.*github.com[:/]##; s/\.git$//')
-  api_desc=$(curl -sf "https://api.github.com/repos/$slug" 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin).get('description') or '')" 2>/dev/null || true)
-  [[ -n "$api_desc" ]] && desc="$api_desc"
-fi
-[[ -z "$desc" && -f package.json ]] && desc=$(python3 -c "import json; print(json.load(open('package.json')).get('description',''))" 2>/dev/null || true)
-[[ -z "$desc" && -f pyproject.toml ]] && desc=$(grep -m1 '^description' pyproject.toml 2>/dev/null | cut -d'"' -f2 || true)
-echo "描述: ${desc:-（未找到，需从 README 提取）}"
-
-section "语言构成"
-if command -v git >/dev/null && git rev-parse --git-dir >/dev/null 2>&1; then
-  git ls-files | awk -F. 'NF>1 {print $NF}' | sort | uniq -c | sort -rn | head -8 | \
-    awk '{printf "  .%-8s %s 个文件\n", $2, $1}'
-else
-  echo "  （非 git 仓库，跳过）"
-fi
-
-section "项目类型探测"
-for f in package.json pyproject.toml setup.py Cargo.toml go.mod pom.xml build.gradle Gemfile requirements.txt Makefile Dockerfile; do
-  [[ -f "$f" ]] && echo "  发现: $f"
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --output)
+      [[ $# -ge 2 ]] || { echo "--output needs a path" >&2; exit 2; }
+      OUTPUT="$2"
+      shift 2
+      ;;
+    -h|--help)
+      sed -n '2,3p' "$0"
+      exit 0
+      ;;
+    -*)
+      echo "Unknown option: $1" >&2
+      exit 2
+      ;;
+    *)
+      TARGET="$1"
+      shift
+      ;;
+  esac
 done
 
-section "包管理器 / 脚本（package.json）"
-if [[ -f package.json ]]; then
-  python3 -c "
+[[ -d "$TARGET" ]] || { echo "Target repository does not exist: $TARGET" >&2; exit 2; }
+TARGET=$(cd "$TARGET" && pwd -P)
+OUTPUT=${OUTPUT:-"$TARGET/.project-showcase/facts.json"}
+mkdir -p "$(dirname "$OUTPUT")"
+
+remote=$(git -C "$TARGET" config --get remote.origin.url 2>/dev/null || true)
+readme=""
+for candidate in README.md readme.md Readme.md README.rst README; do
+  if [[ -f "$TARGET/$candidate" ]]; then readme="$candidate"; break; fi
+done
+
+# Network metadata is deliberately opt-in: the skill must work in offline and private repos.
+remote_description=""
+if [[ "${PROJECT_SHOWCASE_FETCH_REMOTE:-0}" == "1" && "$remote" == *github.com* ]] && command -v curl >/dev/null; then
+  slug=$(printf '%s' "$remote" | sed -E 's#.*github.com[:/]##; s/\.git$//')
+  remote_description=$(curl --connect-timeout 3 --max-time 8 -fsS "https://api.github.com/repos/$slug" 2>/dev/null \
+    | python3 -c "import json,sys; print(json.load(sys.stdin).get('description') or '')" 2>/dev/null || true)
+fi
+
+TARGET="$TARGET" OUTPUT="$OUTPUT" REMOTE="$remote" README_PATH="$readme" REMOTE_DESCRIPTION="$remote_description" python3 - <<'PY'
 import json
-d = json.load(open('package.json'))
-print('  name:', d.get('name'))
-print('  version:', d.get('version'))
-print('  bin:', d.get('bin'))
-scripts = d.get('scripts', {})
-for k in ['dev','build','test','start']:
-    if k in scripts: print(f'  script {k}:', scripts[k])
-deps = {**d.get('dependencies',{}), **d.get('devDependencies',{})}
-print('  依赖数:', len(deps))
-"
-  for lock in pnpm-lock.yaml yarn.lock package-lock.json bun.lockb; do
-    [[ -f "$lock" ]] && echo "  锁文件: $lock"
-  done
-else
-  echo "  （无 package.json）"
-fi
+import os
+import re
+from pathlib import Path
 
-section "README 摘要"
-if [[ -f README.md ]]; then
-  echo "  总行数: $(wc -l < README.md)"
-  echo "  --- 前 60 行 ---"
-  head -60 README.md | sed 's/^/  | /'
-else
-  for alt in readme.md Readme.md README.rst README; do
-    [[ -f "$alt" ]] && echo "  找到: $alt（内容需手动读取）" && break
-  done
-  [[ -z "${alt:-}" ]] && echo "  ⚠️ 未找到 README"
-fi
+root = Path(os.environ["TARGET"])
+output = Path(os.environ["OUTPUT"])
+readme_name = os.environ["README_PATH"]
+remote = os.environ["REMOTE"]
+remote_description = os.environ["REMOTE_DESCRIPTION"]
+image_suffixes = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".avif"}
+manifests = [
+    "package.json", "pyproject.toml", "setup.py", "Cargo.toml", "go.mod", "pom.xml",
+    "build.gradle", "build.gradle.kts", "Gemfile", "requirements.txt", "Makefile", "Dockerfile",
+]
+lockfiles = ["pnpm-lock.yaml", "yarn.lock", "package-lock.json", "bun.lockb", "uv.lock", "poetry.lock", "Cargo.lock", "go.sum"]
 
-section "截图 / 资源目录"
-for d in assets docs/images images screenshots .github/assets public static; do
-  if [[ -d "$d" ]]; then
-    count=$(find "$d" -maxdepth 2 \( -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.gif' -o -iname '*.webp' -o -iname '*.svg' \) 2>/dev/null | wc -l | tr -d ' ')
-    [[ "$count" -gt 0 ]] && echo "  $d/ — $count 张图片:" && find "$d" -maxdepth 2 \( -iname '*.png' -o -iname '*.jpg' -o -iname '*.gif' -o -iname '*.webp' \) 2>/dev/null | head -10 | sed 's/^/    /'
-  fi
-done
-ls *.png *.gif *.jpg 2>/dev/null | head -5 | sed 's/^/  根目录: /' || true
+def source(field, value, path, line=None):
+    entry = {"field": field, "value": value, "source": path}
+    if line is not None:
+        entry["line"] = line
+    return entry
 
-section "License / 版本"
-for l in LICENSE LICENSE.md LICENSE.txt; do
-  [[ -f "$l" ]] && echo "  License: $(head -3 "$l" | grep -oiE 'MIT|Apache|GPL|BSD|MPL|UNLICENSE' | head -1)（$l）" && break
-done
-[[ -f CHANGELOG.md ]] && echo "  CHANGELOG 最新版本: $(grep -m1 -oE '[0-9]+\.[0-9]+[0-9a-z.]*' CHANGELOG.md || echo '未知')"
+sources = [source("project_name", root.name, ".")]
+description = remote_description
+if remote_description:
+    sources.append(source("description", remote_description, "GitHub API (opt-in)"))
 
-section "完成"
-echo "以上信息仅供初筛，生成网站前请完整阅读 README。"
+package_path = root / "package.json"
+if package_path.exists():
+    try:
+        package = json.loads(package_path.read_text(encoding="utf-8"))
+        if package.get("name"):
+            sources.append(source("package_name", package["name"], "package.json"))
+        if not description and package.get("description"):
+            description = package["description"]
+            sources.append(source("description", description, "package.json"))
+    except (OSError, json.JSONDecodeError):
+        pass
+
+pyproject = root / "pyproject.toml"
+if not description and pyproject.exists():
+    for number, line in enumerate(pyproject.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
+        match = re.match(r"\s*description\s*=\s*[\"'](.+?)[\"']\s*$", line)
+        if match:
+            description = match.group(1)
+            sources.append(source("description", description, "pyproject.toml", number))
+            break
+
+readme_headings = []
+if readme_name:
+    readme_path = root / readme_name
+    for number, line in enumerate(readme_path.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
+        heading = re.match(r"^(#{1,3})\s+(.+?)\s*$", line)
+        if heading:
+            text = heading.group(2).strip()
+            readme_headings.append({"text": text, "level": len(heading.group(1)), "line": number})
+            if not description and len(heading.group(1)) == 1:
+                continue
+        if not description and line.strip() and not line.startswith(("#", "```", "!", "[")):
+            description = line.strip()
+            sources.append(source("description", description, readme_name, number))
+            break
+
+assets = []
+for path in root.rglob("*"):
+    if not path.is_file() or path.suffix.lower() not in image_suffixes:
+        continue
+    if any(part in {".git", "node_modules", "vendor", ".project-showcase"} for part in path.parts):
+        continue
+    assets.append(str(path.relative_to(root)))
+
+facts = {
+    "schema_version": 1,
+    "repository": {"path": str(root), "name": root.name, "remote": remote or None},
+    "description": description or None,
+    "manifests": [name for name in manifests if (root / name).is_file()],
+    "lockfiles": [name for name in lockfiles if (root / name).is_file()],
+    "readme": {"path": readme_name or None, "headings": readme_headings},
+    "assets": sorted(assets),
+    "sources": sources,
+    "notes": [
+        "Treat this manifest as an index, not proof of a marketing claim.",
+        "Before publishing copy, map each claim to a source file and line, or omit it.",
+    ],
+}
+output.write_text(json.dumps(facts, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+PY
+
+printf 'Facts written: %s\n' "$OUTPUT"
+python3 - "$OUTPUT" <<'PY'
+import json
+import sys
+facts = json.load(open(sys.argv[1], encoding="utf-8"))
+print(f"Project: {facts['repository']['name']}")
+print(f"Description: {facts['description'] or 'not found'}")
+print(f"Manifests: {', '.join(facts['manifests']) or 'none'}")
+print(f"Assets: {len(facts['assets'])}")
+print(f"README: {facts['readme']['path'] or 'not found'}")
+PY
