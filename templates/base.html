@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<!-- project-showcase 单文件骨架：生成时按所选风格填充 <style> 与各区块内容 -->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{PROJECT_NAME}} — {{TAGLINE}}</title>
+<meta name="description" content="{{DESCRIPTION}}">
+<!-- 所选风格要求 Google Fonts 时在此引入 -->
+<style>
+  /* ===== Reset ===== */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  img { max-width: 100%; display: block; }
+  a { color: inherit; }
+  body { font-family: var(--font); background: var(--bg); color: var(--text); }
+
+  /* ===== 通用：滚动淡入（风格文件禁用时可删除） ===== */
+  .reveal { opacity: 0; transform: translateY(24px); transition: opacity .7s ease-out, transform .7s ease-out; }
+  .reveal.visible { opacity: 1; transform: none; }
+
+  /* ===== 通用：代码块 + 复制按钮 ===== */
+  .codeblock { position: relative; }
+  .codeblock .copy-btn {
+    position: absolute; top: 10px; right: 10px; cursor: pointer;
+    border: 1px solid currentColor; background: transparent; color: inherit;
+    font: inherit; font-size: 12px; padding: 4px 10px; opacity: .6;
+  }
+  .codeblock .copy-btn:hover { opacity: 1; }
+
+  /* ===== 在此按风格文件编写：导航 / Hero / 特性 / 展示 / 快速开始 / Footer ===== */
+</style>
+</head>
+<body>
+
+<nav>
+  <!-- logo（项目名）+ 4-5 个锚点链接 + GitHub 链接 -->
+</nav>
+
+<header class="hero">
+  <h1>{{PROJECT_NAME}}</h1>
+  <p class="tagline">{{TAGLINE}}</p>
+  <div class="cta">
+    <a class="btn-primary" href="{{GITHUB_URL}}">GitHub</a>
+    <a class="btn-secondary" href="#quickstart">快速开始</a>
+  </div>
+</header>
+
+<section id="features">
+  <!-- 3-6 个特性卡片，来自 README 真实内容 -->
+</section>
+
+<section id="showcase">
+  <!-- 截图 / demo / 代码示例；无素材则跳过 -->
+</section>
+
+<section id="quickstart">
+  <h2>快速开始</h2>
+  <div class="codeblock">
+    <pre><code id="install-cmd">{{INSTALL_COMMAND}}</code></pre>
+    <button class="copy-btn" data-copy="#install-cmd">复制</button>
+  </div>
+  <!-- 最小使用示例 -->
+</section>
+
+<footer>
+  <!-- License · 作者 · 仓库链接 · © {{YEAR}} -->
+</footer>
+
+<script>
+  // 滚动淡入
+  const io = new IntersectionObserver(es => es.forEach(e => {
+    if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); }
+  }), { threshold: 0.15 });
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+  // 复制按钮
+  document.querySelectorAll('.copy-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const src = document.querySelector(btn.dataset.copy);
+      await navigator.clipboard.writeText(src.textContent.trim());
+      const old = btn.textContent; btn.textContent = '已复制 ✓';
+      setTimeout(() => btn.textContent = old, 1500);
+    });
+  });
+</script>
+</body>
+</html>
