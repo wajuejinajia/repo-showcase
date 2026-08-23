@@ -6,6 +6,12 @@ Run the static validator first:
 python3 <skill-root>/scripts/validate-site.py <target-repository>/site
 ```
 
+For a multi-page site, validate every route instead of only the homepage:
+
+```bash
+python3 <skill-root>/scripts/validate-site.py <target-repository>/site --all
+```
+
 It checks unresolved template placeholders, page metadata, HTML language, duplicate IDs, fragment links, local resources, image alt text, external dependencies, and the default 150 KB `index.html` budget. Use `--allow-external` only for user-approved HTTP(S) links or fonts.
 
 Then use a local server for visual checks:
@@ -21,6 +27,7 @@ When browser tooling is available, check:
 - Keyboard: links and buttons have visible focus; the copy control works or clearly reports that manual copying is needed.
 - Motion: `prefers-reduced-motion` disables nonessential movement; no flash or constant animation harms legibility.
 - Content: each visible claim belongs in the evidence map, assets load from `site/`, and no sample text remains.
+- Multi-page navigation: every generated route is reachable from the shared navigation, nested links resolve from their own directory, and cross-page fragments point to real IDs.
 
 If browser tooling is unavailable, report that visual review could not be performed and do not imply that viewport behavior was inspected. The static validator remains useful, but it does not prove visual layout.
 

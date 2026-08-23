@@ -4,6 +4,8 @@
 
 It is designed for projects that have code and a README but no public introduction site: the agent extracts verifiable project facts, helps choose an appropriate visual system, creates a portable static site, and checks it before handoff.
 
+It can also produce an optional static multi-page site for project documentation, onboarding guides, and runnable or illustrative demos.
+
 ## Why this exists
 
 README files serve developers well, but they are rarely a clear project introduction for users, collaborators, or evaluators. Existing AI landing-page generators can turn briefs or README content into pages; this skill is differentiated by working inside the target repository, keeping claims traceable to source, offering distinct visual systems, and producing a self-contained static result.
@@ -49,10 +51,36 @@ Create a project homepage in tech-futuristic style and verify it locally. Do not
 Use repo-showcase to build an Apple-minimal introduction site, then prepare it for GitHub Pages.
 ```
 
+For a larger project site:
+
+```text
+Use repo-showcase in showcase-guide-demo mode. Create the homepage, a guide quick-start page, and a demo page from the repository's real examples. Omit anything unsupported by the source.
+```
+
 The workflow writes a fact index to `.repo-showcase/facts.json`, produces `site/index.html` by default, and validates the output with:
 
 ```bash
 python3 <skill-root>/scripts/validate-site.py site
+```
+
+For a multi-page site, use `--all` to check every HTML route:
+
+```bash
+python3 <skill-root>/scripts/validate-site.py site --all
+```
+
+Typical multi-page output:
+
+```text
+site/
+├── index.html
+├── docs/
+│   └── index.html
+├── guide/
+│   └── quick-start.html
+├── demo/
+│   └── index.html
+└── assets/
 ```
 
 ## Design principles
