@@ -28,9 +28,9 @@ README files serve developers well, but they are rarely a clear project introduc
 Clone the folder into the skills directory supported by your agent. Common project-local paths include:
 
 ```bash
-git clone https://github.com/wajuejinajia/project-showcase .agents/skills/repo-showcase
-git clone https://github.com/wajuejinajia/project-showcase .claude/skills/repo-showcase
-git clone https://github.com/wajuejinajia/project-showcase .opencode/skills/repo-showcase
+git clone https://github.com/wajuejinajia/repo-showcase .agents/skills/repo-showcase
+git clone https://github.com/wajuejinajia/repo-showcase .claude/skills/repo-showcase
+git clone https://github.com/wajuejinajia/repo-showcase .opencode/skills/repo-showcase
 ```
 
 Other agents can use the same folder whenever they support `SKILL.md`-style skills. The core runtime only needs Bash and Python 3; no Node modules or browser package is required for its deterministic checks.
