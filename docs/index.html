@@ -28,8 +28,9 @@
       position: sticky;
       top: 0;
       z-index: 200;
-      background: var(--nav-bg, var(--bg));
-      border-bottom: var(--nav-border, 1px solid var(--border-color, rgba(128,128,128,.25)));
+      background: var(--switcher-bg, var(--nav-bg, var(--bg)));
+      border-bottom: var(--nav-border, 2px solid var(--border-color, rgba(128,128,128,.35)));
+      box-shadow: 0 2px 18px rgba(0,0,0,.18);
       backdrop-filter: var(--nav-blur, none);
       -webkit-backdrop-filter: var(--nav-blur, none);
     }
@@ -43,11 +44,11 @@
       align-items: center;
     }
     .switcher-label {
-      font-size: 12px;
-      font-weight: 600;
-      letter-spacing: .04em;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: .06em;
       text-transform: uppercase;
-      color: var(--text-secondary, var(--text));
+      color: var(--text, inherit);
       white-space: nowrap;
     }
     .switcher-tabs {
@@ -82,17 +83,22 @@
     .switcher-select {
       display: none;
       font-family: inherit;
-      font-size: 14px;
-      padding: .35rem .5rem;
-      border-radius: 6px;
-      border: 1px solid var(--border-color, #ccc);
+      font-size: 16px;
+      font-weight: 650;
+      padding: .55rem .75rem;
+      min-height: 44px;
+      border-radius: 8px;
+      border: 2px solid var(--accent, var(--border-color, #888));
       background: var(--surface, var(--bg));
       color: var(--text);
+      width: 100%;
       max-width: 100%;
     }
+    header[id], section[id] { scroll-margin-top: 5.5rem; }
     @media (max-width: 720px) {
+      .switcher-inner { flex-direction: column; align-items: stretch; gap: .35rem; }
       .switcher-tabs { display: none; }
-      .switcher-select { display: block; flex: 1; }
+      .switcher-select { display: block; flex: 1; width: 100%; }
     }
 
     .topnav {
@@ -746,19 +752,18 @@
 
   <div class="switcher" role="region" aria-label="Style previewer">
     <div class="switcher-inner">
-      <span class="switcher-label" id="style-switcher-label">Style</span>
+      <label class="switcher-label" id="style-switcher-label" for="style-select">Preview style</label>
       <div class="switcher-tabs" role="tablist" aria-labelledby="style-switcher-label">
-        <button type="button" role="tab" id="apple-minimal" data-theme-id="apple-minimal" aria-pressed="false">apple-minimal</button>
-        <button type="button" role="tab" id="minimal-clean" data-theme-id="minimal-clean" aria-pressed="false">minimal-clean</button>
-        <button type="button" role="tab" id="tech-futuristic" data-theme-id="tech-futuristic" aria-pressed="false">tech-futuristic</button>
-        <button type="button" role="tab" id="cyberpunk-neon" data-theme-id="cyberpunk-neon" aria-pressed="false">cyberpunk-neon</button>
-        <button type="button" role="tab" id="gaming-arcade" data-theme-id="gaming-arcade" aria-pressed="false">gaming-arcade</button>
-        <button type="button" role="tab" id="glassmorphism" data-theme-id="glassmorphism" aria-pressed="false">glassmorphism</button>
-        <button type="button" role="tab" id="brutalist" data-theme-id="brutalist" aria-pressed="false">brutalist</button>
-        <button type="button" role="tab" id="terminal-hacker" data-theme-id="terminal-hacker" aria-pressed="true">terminal-hacker</button>
+        <button type="button" role="tab" id="tab-apple-minimal" data-theme-id="apple-minimal" aria-pressed="false">apple-minimal</button>
+        <button type="button" role="tab" id="tab-minimal-clean" data-theme-id="minimal-clean" aria-pressed="false">minimal-clean</button>
+        <button type="button" role="tab" id="tab-tech-futuristic" data-theme-id="tech-futuristic" aria-pressed="false">tech-futuristic</button>
+        <button type="button" role="tab" id="tab-cyberpunk-neon" data-theme-id="cyberpunk-neon" aria-pressed="false">cyberpunk-neon</button>
+        <button type="button" role="tab" id="tab-gaming-arcade" data-theme-id="gaming-arcade" aria-pressed="false">gaming-arcade</button>
+        <button type="button" role="tab" id="tab-glassmorphism" data-theme-id="glassmorphism" aria-pressed="false">glassmorphism</button>
+        <button type="button" role="tab" id="tab-brutalist" data-theme-id="brutalist" aria-pressed="false">brutalist</button>
+        <button type="button" role="tab" id="tab-terminal-hacker" data-theme-id="terminal-hacker" aria-pressed="true">terminal-hacker</button>
       </div>
-      <label class="switcher-label" for="style-select" style="position:absolute;left:-9999px">Choose style</label>
-      <select id="style-select" class="switcher-select" aria-label="Choose style">
+      <select id="style-select" class="switcher-select">
         <option value="apple-minimal">apple-minimal</option>
         <option value="minimal-clean">minimal-clean</option>
         <option value="tech-futuristic">tech-futuristic</option>
@@ -950,7 +955,14 @@ quick-start page, and a demo page from the repository's real examples.</pre>
       return 'terminal-hacker';
     }
 
-    function setTheme(name, pushHash) {
+    function themeHref(name, hash) {
+      const url = new URL(location.href);
+      url.searchParams.set('style', name);
+      const section = hash && !STYLES.includes(hash) ? hash : '';
+      return url.pathname + url.search + (section ? '#' + section : '');
+    }
+
+    function setTheme(name, updateUrl) {
       if (!STYLES.includes(name)) name = 'terminal-hacker';
       root.setAttribute('data-theme', name);
       document.querySelectorAll('.switcher-tabs button').forEach(btn => {
@@ -963,11 +975,9 @@ quick-start page, and a demo page from the repository's real examples.</pre>
       document.querySelectorAll('[data-style-item]').forEach(li => {
         li.classList.toggle('active-style', li.getAttribute('data-style-item') === name);
       });
-      if (pushHash !== false) {
-        const url = new URL(location.href);
-        url.searchParams.set('style', name);
-        url.hash = name;
-        history.replaceState(null, '', url.pathname + url.search + '#' + name);
+      if (updateUrl !== false) {
+        const hash = location.hash.replace(/^#/, '');
+        history.replaceState(null, '', themeHref(name, hash));
       }
       document.title = 'repo-showcase — ' + name;
     }
@@ -999,16 +1009,14 @@ quick-start page, and a demo page from the repository's real examples.</pre>
         if (!target) return;
         e.preventDefault();
         target.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'start' });
-        const theme = root.getAttribute('data-theme');
-        const url = new URL(location.href);
-        url.searchParams.set('style', theme);
-        history.replaceState(null, '', url.pathname + url.search + '#' + theme);
+        const theme = root.getAttribute('data-theme') || 'terminal-hacker';
+        history.replaceState(null, '', themeHref(theme, id));
       });
     });
 
     window.addEventListener('hashchange', () => {
       const hash = location.hash.replace(/^#/, '');
-      if (STYLES.includes(hash)) setTheme(hash, false);
+      if (STYLES.includes(hash)) setTheme(hash, true);
     });
 
     setTheme(resolveStyle(), true);

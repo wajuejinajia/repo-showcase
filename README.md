@@ -12,7 +12,7 @@ Interactive style previewer for all 8 visual systems (switch themes without relo
 
 **https://wajuejinajia.github.io/repo-showcase/**
 
-Deep-link a style with a hash or query, for example `#cyberpunk-neon` or `?style=apple-minimal`. Source for the page: [`docs/index.html`](docs/index.html) (also published from the `gh-pages` branch).
+Deep-link a style with a query parameter, for example `?style=cyberpunk-neon` or `?style=apple-minimal`. Section links stay real hashes (`#styles`, `#install`). Source for the page: [`docs/index.html`](docs/index.html) (also published from the `gh-pages` branch).
 
 ## Why this exists
 
