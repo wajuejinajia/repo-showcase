@@ -6,6 +6,14 @@ It is designed for projects that have code and a README but no public introducti
 
 It can also produce an optional static multi-page site for project documentation, onboarding guides, and runnable or illustrative demos.
 
+## Live demo
+
+Dogfood showcase (terminal-hacker style), served via GitHub Pages:
+
+**https://wajuejinajia.github.io/repo-showcase/**
+
+Source for the page: [`docs/index.html`](docs/index.html) (also published from the `gh-pages` branch).
+
 ## Why this exists
 
 README files serve developers well, but they are rarely a clear project introduction for users, collaborators, or evaluators. Existing AI landing-page generators can turn briefs or README content into pages; this skill is differentiated by working inside the target repository, keeping claims traceable to source, offering distinct visual systems, and producing a self-contained static result.
