@@ -8,11 +8,11 @@ It can also produce an optional static multi-page site for project documentation
 
 ## Live demo
 
-Dogfood showcase (terminal-hacker style), served via GitHub Pages:
+Interactive style previewer for all 8 visual systems (switch themes without reload), served via GitHub Pages:
 
 **https://wajuejinajia.github.io/repo-showcase/**
 
-Source for the page: [`docs/index.html`](docs/index.html) (also published from the `gh-pages` branch).
+Deep-link a style with a hash or query, for example `#cyberpunk-neon` or `?style=apple-minimal`. Source for the page: [`docs/index.html`](docs/index.html) (also published from the `gh-pages` branch).
 
 ## Why this exists
 
