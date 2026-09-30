@@ -1,291 +1,794 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="terminal-hacker">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="repo-showcase is an Agent Skill that turns a code repository into a source-backed, style-led project website. Dependency-free static output for repository homepages and GitHub Pages.">
+  <meta name="description" content="repo-showcase is an Agent Skill that turns a code repository into a source-backed, style-led project website. Interactive preview of all 8 visual styles — dependency-free static output for repository homepages and GitHub Pages.">
   <title>repo-showcase — source-backed project websites</title>
   <style>
-    :root {
-      --bg: #0a0e0a;
-      --bg-alt: #050805;
-      --surface: #0d120d;
-      --text: #00ff41;
-      --text-dim: #00b32d;
-      --text-secondary: #3fae5a;
-      --warn: #ffb000;
-      --err: #ff3e3e;
-      --border: 1px solid #00ff4133;
-      --focus: #00ff41;
-      --font: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-    }
-
+    /* ========== Shared reset & layout ========== */
     *, *::before, *::after { box-sizing: border-box; }
     html { scroll-behavior: smooth; }
     body {
       margin: 0;
       font-family: var(--font);
       background: var(--bg);
-      color: var(--text-secondary);
-      font-size: 15px;
-      line-height: 1.8;
+      color: var(--text-secondary, var(--text));
+      font-size: var(--body-size, 16px);
+      line-height: var(--body-lh, 1.6);
       min-height: 100vh;
+      transition: background .25s ease, color .2s ease;
     }
     img { display: block; max-width: 100%; }
-    a { color: var(--text); text-decoration: none; }
-    a:hover { background: var(--text); color: var(--bg); }
-    :focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+    a { color: var(--link, var(--accent, var(--text))); text-decoration: none; }
+    a:hover { color: var(--link-hover, var(--accent-hover, var(--accent))); }
+    :focus-visible { outline: 3px solid var(--focus, var(--accent, #2563eb)); outline-offset: 3px; }
 
-    .scanlines {
-      pointer-events: none;
-      position: fixed;
-      inset: 0;
-      z-index: 9999;
-      background: repeating-linear-gradient(
-        0deg,
-        transparent,
-        transparent 2px,
-        rgba(0, 0, 0, 0.12) 2px,
-        rgba(0, 0, 0, 0.12) 4px
-      );
-      opacity: 0.35;
+    .switcher {
+      position: sticky;
+      top: 0;
+      z-index: 200;
+      background: var(--nav-bg, var(--bg));
+      border-bottom: var(--nav-border, 1px solid var(--border-color, rgba(128,128,128,.25)));
+      backdrop-filter: var(--nav-blur, none);
+      -webkit-backdrop-filter: var(--nav-blur, none);
+    }
+    .switcher-inner {
+      max-width: var(--maxw, 1120px);
+      margin: 0 auto;
+      padding: .55rem 1.25rem .65rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: .5rem .75rem;
+      align-items: center;
+    }
+    .switcher-label {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      color: var(--text-secondary, var(--text));
+      white-space: nowrap;
+    }
+    .switcher-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .35rem;
+      flex: 1;
+      min-width: 0;
+    }
+    .switcher-tabs button {
+      appearance: none;
+      border: var(--chip-border, 1px solid var(--border-color, #ccc));
+      background: var(--chip-bg, transparent);
+      color: var(--chip-fg, var(--text));
+      font-family: inherit;
+      font-size: 12px;
+      padding: .3rem .55rem;
+      cursor: pointer;
+      border-radius: var(--chip-radius, 6px);
+      line-height: 1.3;
+      transition: background .15s, color .15s, border-color .15s, box-shadow .15s, transform .1s;
+    }
+    .switcher-tabs button[aria-pressed="true"] {
+      background: var(--chip-active-bg, var(--accent, #18181b));
+      color: var(--chip-active-fg, #fff);
+      border-color: var(--chip-active-border, var(--accent, #18181b));
+      box-shadow: var(--chip-active-shadow, none);
+    }
+    .switcher-tabs button:hover {
+      border-color: var(--accent, #666);
+    }
+    .switcher-select {
+      display: none;
+      font-family: inherit;
+      font-size: 14px;
+      padding: .35rem .5rem;
+      border-radius: 6px;
+      border: 1px solid var(--border-color, #ccc);
+      background: var(--surface, var(--bg));
+      color: var(--text);
+      max-width: 100%;
+    }
+    @media (max-width: 720px) {
+      .switcher-tabs { display: none; }
+      .switcher-select { display: block; flex: 1; }
     }
 
+    .topnav {
+      max-width: var(--maxw, 1120px);
+      margin: 0 auto;
+      padding: .65rem 1.25rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: .5rem 1rem;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: var(--nav-border, 1px solid var(--border-color, rgba(128,128,128,.2)));
+      background: var(--nav-bg, transparent);
+    }
+    .topnav .brand {
+      font-weight: 700;
+      color: var(--text);
+      font-size: var(--brand-size, 15px);
+      letter-spacing: var(--brand-track, 0);
+    }
+    .topnav nav { display: flex; flex-wrap: wrap; gap: .35rem .75rem; }
+    .topnav nav a {
+      color: var(--text-secondary, var(--text));
+      font-size: 14px;
+      padding: .15rem .2rem;
+    }
+    .topnav nav a:hover { color: var(--text); }
+
     .wrap {
-      max-width: 880px;
+      max-width: var(--maxw, 1120px);
       margin: 0 auto;
       padding: 0 1.25rem 3rem;
     }
 
-    /* Status bar nav */
-    .statusbar {
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      background: var(--bg-alt);
-      border-bottom: var(--border);
-      font-size: 13px;
-      color: var(--text-dim);
+    .hero {
+      margin-top: var(--hero-mt, 2.5rem);
+      padding: var(--hero-pad, 2rem 0 2.5rem);
+      text-align: var(--hero-align, left);
+      background: var(--hero-bg, transparent);
+      border: var(--hero-border, none);
+      border-radius: var(--hero-radius, 0);
+      position: relative;
     }
-    .statusbar-inner {
-      max-width: 880px;
-      margin: 0 auto;
-      padding: 0.55rem 1.25rem;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.35rem 0.75rem;
-      align-items: center;
+    .hero h1 {
+      margin: 0 0 .5rem;
+      color: var(--text);
+      font-size: var(--h1-size, clamp(36px, 6vw, 64px));
+      font-weight: var(--h1-weight, 650);
+      letter-spacing: var(--h1-track, -0.02em);
+      line-height: var(--h1-lh, 1.1);
+      text-transform: var(--h1-transform, none);
+      text-shadow: var(--h1-shadow, none);
+      max-width: var(--hero-text-max, none);
+      margin-left: var(--hero-center-ml, 0);
+      margin-right: var(--hero-center-mr, 0);
+      background: var(--h1-bg, none);
+      -webkit-background-clip: var(--h1-clip, border-box);
+      background-clip: var(--h1-clip, border-box);
+      -webkit-text-fill-color: var(--h1-fill, unset);
+      color: var(--h1-color, var(--text));
     }
-    .statusbar .brand { color: var(--text); font-weight: 700; }
-    .statusbar .sep { color: var(--text-dim); opacity: 0.5; }
-    .statusbar nav { display: flex; flex-wrap: wrap; gap: 0.35rem; }
-    .statusbar nav a {
-      color: var(--text-dim);
-      padding: 0 0.2rem;
+    .hero .tagline {
+      margin: 0 0 1rem;
+      color: var(--text-secondary, var(--text));
+      font-size: var(--tagline-size, clamp(18px, 2.5vw, 24px));
+      font-weight: 400;
+      max-width: var(--hero-text-max, 720px);
+      margin-left: var(--hero-center-ml, 0);
+      margin-right: var(--hero-center-mr, 0);
     }
-    .statusbar nav a:hover { color: var(--bg); background: var(--text); }
-
-    /* Terminal session metaphor */
-    .term {
-      margin-top: 1.5rem;
-      background: var(--surface);
-      border: var(--border);
-      padding: 1.25rem 1.25rem 1.5rem;
+    .hero .lede {
+      margin: 0 0 1.25rem;
+      color: var(--text-secondary, var(--text));
+      max-width: var(--prose-max, 680px);
+      margin-left: var(--hero-center-ml, 0);
+      margin-right: var(--hero-center-mr, 0);
     }
-
     .ascii {
+      display: none;
       color: var(--text);
       font-size: clamp(7px, 1.6vw, 11px);
       line-height: 1.15;
       white-space: pre;
       overflow-x: auto;
       margin: 0 0 1rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
     }
+    .prompt-line { display: none; margin: .15rem 0; color: var(--text); }
+    .prompt-line .ps { color: var(--warn, var(--accent)); }
 
-    .prompt-line { color: var(--text); margin: 0.15rem 0; }
-    .prompt-line .ps { color: var(--warn); }
-    .output-line { color: var(--text-secondary); margin: 0.15rem 0; }
-    .cursor {
-      display: inline-block;
-      width: 0.6ch;
-      background: var(--text);
-      animation: blink 0.8s steps(2) infinite;
-      vertical-align: text-bottom;
-      height: 1.1em;
-    }
-    @keyframes blink { 50% { opacity: 0; } }
-
-    h1 {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      padding: 0;
-      margin: -1px;
-      overflow: hidden;
-      clip: rect(0, 0, 0, 0);
-      white-space: nowrap;
-      border: 0;
-    }
-
-    .hero-title {
-      color: var(--text);
-      font-size: clamp(20px, 3.5vw, 32px);
-      line-height: 1.8;
-      font-weight: 700;
-      margin: 0.5rem 0 0.25rem;
-    }
-
-    .badges { margin: 0.75rem 0 1rem; display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .badges { margin: 0 0 1.25rem; display: flex; flex-wrap: wrap; gap: .5rem; justify-content: var(--hero-justify, flex-start); }
     .badge {
-      color: var(--warn);
-      border: 1px solid var(--warn);
-      padding: 0 0.45rem;
+      display: inline-block;
       font-size: 12px;
-      letter-spacing: 0.04em;
+      padding: .2rem .55rem;
+      border-radius: var(--badge-radius, 999px);
+      background: var(--badge-bg, rgba(128,128,128,.12));
+      color: var(--badge-fg, var(--text));
+      border: var(--badge-border, none);
+      letter-spacing: .03em;
+      font-weight: 600;
+      text-transform: var(--badge-transform, none);
     }
 
-    .cta-row { display: flex; flex-wrap: wrap; gap: 0.75rem; margin: 1.25rem 0 0.5rem; }
+    .cta-row { display: flex; flex-wrap: wrap; gap: .75rem; justify-content: var(--hero-justify, flex-start); }
     .btn {
       display: inline-block;
-      border: 1px solid var(--text);
-      color: var(--text);
-      background: var(--bg);
-      padding: 0.35rem 0.85rem;
+      border: var(--btn-border, none);
+      background: var(--btn-bg, var(--accent, #18181b));
+      color: var(--btn-fg, #fff);
+      padding: var(--btn-pad, .65rem 1.25rem);
       font-family: inherit;
-      font-size: 14px;
+      font-size: var(--btn-size, 14px);
+      font-weight: var(--btn-weight, 600);
+      border-radius: var(--btn-radius, 8px);
       cursor: pointer;
+      box-shadow: var(--btn-shadow, none);
+      text-transform: var(--btn-transform, none);
+      clip-path: var(--btn-clip, none);
+      transition: background .2s, color .2s, border-color .2s, transform .12s, box-shadow .12s;
     }
     .btn:hover, .btn:focus-visible {
-      background: var(--text);
-      color: var(--bg);
+      background: var(--btn-hover-bg, var(--accent-hover, var(--accent)));
+      color: var(--btn-hover-fg, var(--btn-fg, #fff));
+      transform: var(--btn-hover-transform, none);
+      box-shadow: var(--btn-hover-shadow, var(--btn-shadow, none));
     }
-    .btn-ghost { border-color: var(--text-dim); color: var(--text-dim); }
+    .btn-ghost {
+      background: var(--btn-ghost-bg, transparent);
+      color: var(--btn-ghost-fg, var(--accent, var(--text)));
+      border: var(--btn-ghost-border, 1px solid var(--border-color, #ccc));
+      box-shadow: none;
+    }
+    .btn-ghost:hover {
+      background: var(--btn-ghost-hover-bg, rgba(128,128,128,.08));
+      color: var(--btn-ghost-hover-fg, var(--text));
+    }
 
-    section { margin: 2rem 0; }
-    .section-head {
-      color: var(--text);
-      font-size: 14px;
-      margin: 0 0 0.75rem;
-      white-space: pre-wrap;
-      word-break: break-word;
+    section {
+      margin: var(--section-mt, 4rem) 0;
+      padding: var(--section-pad, 0);
+      background: var(--section-bg, transparent);
+      border-radius: var(--section-radius, 0);
     }
-    .hr {
-      color: var(--text-dim);
-      opacity: 0.45;
+    .section-label {
+      margin: 0 0 .35rem;
+      font-size: var(--section-label-size, 13px);
+      font-weight: 600;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--accent, var(--text-secondary));
+      font-family: var(--font-mono, var(--font));
+    }
+    .section-title {
+      margin: 0 0 1rem;
+      color: var(--text);
+      font-size: var(--h2-size, clamp(24px, 3vw, 36px));
+      font-weight: var(--h2-weight, 650);
+      letter-spacing: var(--h2-track, -0.02em);
+      text-transform: var(--h2-transform, none);
+    }
+    .section-rule {
+      display: none;
+      color: var(--text-dim, var(--text-secondary));
+      opacity: .5;
       margin: 0 0 1rem;
       overflow: hidden;
       white-space: nowrap;
+      font-family: ui-monospace, monospace;
     }
 
-    .feature-list { margin: 0; padding: 0; list-style: none; }
-    .feature-list li {
-      margin: 0.35rem 0;
+    .feature-grid {
       display: grid;
-      grid-template-columns: minmax(9rem, 14rem) 1fr;
-      gap: 0.5rem 1rem;
-    }
-    .feature-list .key { color: var(--text); }
-    .feature-list .key::before { content: "[✓] "; color: var(--text-dim); }
-    @media (max-width: 560px) {
-      .feature-list li { grid-template-columns: 1fr; gap: 0.1rem; }
-    }
-
-    .styles-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 0.35rem 1rem;
+      grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+      gap: var(--card-gap, 1rem);
       margin: 0;
       padding: 0;
       list-style: none;
     }
-    .styles-grid li { color: var(--text-secondary); }
-    .styles-grid li::before { content: "$ "; color: var(--warn); }
+    .feature-grid li {
+      background: var(--card-bg, var(--surface, #fff));
+      border: var(--card-border, 1px solid var(--border-color, #e4e4e7));
+      border-radius: var(--card-radius, 10px);
+      padding: var(--card-pad, 1.15rem 1.2rem);
+      box-shadow: var(--card-shadow, none);
+      backdrop-filter: var(--card-blur, none);
+      -webkit-backdrop-filter: var(--card-blur, none);
+      clip-path: var(--card-clip, none);
+      transition: border-color .2s, transform .15s, box-shadow .15s, background .2s;
+    }
+    .feature-grid li:hover {
+      border-color: var(--card-hover-border, var(--accent));
+      transform: var(--card-hover-transform, none);
+      box-shadow: var(--card-hover-shadow, var(--card-shadow, none));
+      background: var(--card-hover-bg, var(--card-bg, var(--surface)));
+    }
+    .feature-grid .key {
+      display: block;
+      color: var(--text);
+      font-weight: 650;
+      margin-bottom: .35rem;
+      font-size: 15px;
+    }
+    .feature-grid .key::before { content: var(--feature-prefix, ""); color: var(--accent); }
+    .feature-grid .desc { color: var(--text-secondary); font-size: 14px; margin: 0; }
+
+    .styles-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: .5rem 1rem;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .styles-grid li {
+      color: var(--text-secondary);
+      padding: .45rem .65rem;
+      border: var(--style-item-border, 1px solid transparent);
+      border-radius: var(--card-radius, 8px);
+      background: var(--style-item-bg, transparent);
+    }
+    .styles-grid li::before { content: var(--style-prefix, "· "); color: var(--accent, var(--text)); }
+    .styles-grid li.active-style {
+      color: var(--text);
+      background: var(--style-item-active-bg, var(--surface, rgba(128,128,128,.08)));
+      border-color: var(--border-color, transparent);
+      font-weight: 600;
+    }
 
     .codeblock {
       position: relative;
-      background: var(--bg-alt);
-      border: var(--border);
-      padding: 0.85rem 1rem 1rem;
-      margin: 0.75rem 0;
+      background: var(--code-bg, #1d1d1f);
+      color: var(--code-fg, #f5f5f7);
+      border: var(--code-border, none);
+      border-radius: var(--code-radius, 10px);
+      padding: .85rem 1rem 1rem;
+      margin: .75rem 0 1rem;
       overflow-x: auto;
+      box-shadow: var(--code-shadow, none);
+      backdrop-filter: var(--code-blur, none);
     }
     .codeblock pre {
       margin: 0;
-      color: var(--text);
-      font-family: inherit;
+      font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace);
       font-size: 13px;
       line-height: 1.7;
       white-space: pre-wrap;
+      color: inherit;
     }
-    .codeblock .prefix { color: var(--warn); }
+    .codeblock .prefix { color: var(--code-prefix, var(--accent, #ffb000)); }
     .copy-btn {
       position: absolute;
-      top: 0.4rem;
-      right: 0.4rem;
-      border: 1px solid var(--text-dim);
-      background: var(--bg);
-      color: var(--text-dim);
+      top: .4rem;
+      right: .4rem;
+      border: 1px solid var(--code-btn-border, rgba(255,255,255,.25));
+      background: var(--code-btn-bg, rgba(0,0,0,.35));
+      color: var(--code-btn-fg, #ddd);
       font-family: inherit;
       font-size: 11px;
-      padding: 0.15rem 0.45rem;
+      padding: .15rem .45rem;
       cursor: pointer;
+      border-radius: 4px;
     }
-    .copy-btn:hover { background: var(--text); color: var(--bg); border-color: var(--text); }
+    .copy-btn:hover { filter: brightness(1.15); }
 
     .steps { margin: 0; padding: 0; list-style: none; }
-    .steps li { margin: 0.4rem 0; }
-    .steps li::before { content: "> "; color: var(--warn); }
+    .steps li {
+      margin: .45rem 0;
+      color: var(--text-secondary);
+      padding-left: 0;
+    }
+    .steps li::before { content: var(--step-prefix, "→ "); color: var(--accent, var(--text)); }
+
+    .note {
+      margin-top: .75rem;
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+    .note strong { color: var(--text); font-weight: 650; }
 
     footer {
-      margin-top: 2.5rem;
-      padding-top: 1rem;
-      border-top: var(--border);
-      color: var(--text-dim);
+      margin-top: 3rem;
+      padding-top: 1.25rem;
+      border-top: var(--footer-border, 1px solid var(--border-color, rgba(128,128,128,.25)));
+      color: var(--text-secondary);
       font-size: 13px;
     }
-    footer a { color: var(--text-dim); }
-    footer a:hover { color: var(--bg); background: var(--text); }
+    footer a { color: var(--text-secondary); }
+    footer a:hover { color: var(--text); }
 
-    .line-print { opacity: 0; }
-    .line-print.visible { opacity: 1; }
+    .reveal { opacity: 0; transform: translateY(20px); transition: opacity .7s ease-out, transform .7s ease-out; }
+    .reveal.visible { opacity: 1; transform: none; }
+
+    .fx-scanlines, .fx-grid, .fx-blobs, .fx-marquee, .fx-sun { display: none; pointer-events: none; }
+    .fx-blobs { position: fixed; inset: 0; z-index: -1; overflow: hidden; }
+    .fx-blobs span {
+      position: absolute;
+      width: 42vw; height: 42vw;
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: .55;
+      animation: blobfloat 60s ease-in-out infinite;
+    }
+    .fx-blobs span:nth-child(1) { background: #7c6cff; top: -10%; left: -5%; }
+    .fx-blobs span:nth-child(2) { background: #4ecdc4; bottom: -15%; right: -5%; animation-delay: -20s; }
+    .fx-blobs span:nth-child(3) { background: #ff6bcb; top: 40%; left: 40%; width: 28vw; height: 28vw; animation-delay: -40s; }
+    @keyframes blobfloat {
+      0%, 100% { transform: translate(0,0) scale(1); }
+      50% { transform: translate(4%, -6%) scale(1.08); }
+    }
+    .fx-scanlines {
+      position: fixed; inset: 0; z-index: 9999;
+      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,.12) 2px, rgba(0,0,0,.12) 4px);
+      opacity: .35;
+    }
+    .fx-grid {
+      position: fixed; inset: 0; z-index: -1;
+      background-image:
+        linear-gradient(var(--grid-line, rgba(255,255,255,.04)) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid-line, rgba(255,255,255,.04)) 1px, transparent 1px);
+      background-size: 64px 64px;
+      mask-image: radial-gradient(ellipse at top, #000 20%, transparent 75%);
+    }
+    .fx-marquee {
+      overflow: hidden;
+      background: #000;
+      color: #fff;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      font-size: 13px;
+      border-block: 3px solid #000;
+      margin: 0 0 1rem;
+    }
+    .fx-marquee div {
+      display: inline-block;
+      white-space: nowrap;
+      padding: .45rem 0;
+      animation: marquee 18s linear infinite;
+    }
+    @keyframes marquee { to { transform: translateX(-50%); } }
+
+    .hud-row {
+      display: none;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+      margin: 1.25rem 0 0;
+      font-family: var(--font-mono, ui-monospace, monospace);
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+    .hud-row strong { color: var(--text); display: block; font-size: 22px; font-weight: 650; }
 
     @media (prefers-reduced-motion: reduce) {
       html { scroll-behavior: auto; }
       *, *::before, *::after {
-        animation-duration: 0.01ms !important;
+        animation-duration: .01ms !important;
         animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
+        transition-duration: .01ms !important;
       }
-      .cursor { animation: none; opacity: 1; }
-      .line-print { opacity: 1; }
-      .scanlines { display: none; }
+      .reveal { opacity: 1; transform: none; }
+      .fx-scanlines, .fx-blobs span, .fx-marquee div { animation: none !important; }
     }
+
+    /* ========== THEME: apple-minimal ========== */
+    [data-theme="apple-minimal"] {
+      --bg: #ffffff; --bg-alt: #f5f5f7; --surface: #f5f5f7; --text: #1d1d1f;
+      --text-secondary: #6e6e73; --accent: #0071e3; --accent-hover: #0077ed;
+      --border-color: #d2d2d7; --focus: #0071e3;
+      --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", "PingFang SC", system-ui, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      --maxw: 980px; --prose-max: 720px; --hero-text-max: 780px;
+      --hero-align: center; --hero-justify: center; --hero-center-ml: auto; --hero-center-mr: auto;
+      --hero-pad: 4rem 0 3rem; --section-mt: 0; --section-pad: 5rem 0;
+      --h1-size: clamp(48px, 8vw, 80px); --h1-weight: 600; --h1-track: -0.015em;
+      --tagline-size: clamp(21px, 3vw, 28px); --body-size: 17px; --body-lh: 1.47;
+      --btn-radius: 980px; --btn-pad: 12px 24px; --btn-bg: #0071e3; --btn-fg: #fff;
+      --btn-hover-bg: #0077ed; --btn-ghost-fg: #0071e3; --btn-ghost-border: none;
+      --btn-ghost-hover-bg: transparent; --btn-ghost-hover-fg: #0077ed;
+      --card-bg: #f5f5f7; --card-border: none; --card-radius: 18px; --card-pad: 1.5rem;
+      --card-gap: 1.25rem; --badge-bg: #f5f5f7; --badge-fg: #1d1d1f;
+      --nav-bg: rgba(255,255,255,.72); --nav-blur: saturate(180%) blur(20px);
+      --nav-border: 1px solid rgba(0,0,0,.08); --code-bg: #1d1d1f; --code-fg: #f5f5f7; --code-radius: 12px;
+      --chip-radius: 980px; --chip-active-bg: #1d1d1f; --section-label-size: 12px;
+      --h2-size: clamp(28px, 4vw, 40px); --h2-weight: 600;
+    }
+    [data-theme="apple-minimal"] section:nth-of-type(odd) { background: #f5f5f7; }
+    [data-theme="apple-minimal"] section { margin-left: -1.25rem; margin-right: -1.25rem; padding-left: 1.25rem; padding-right: 1.25rem; }
+    [data-theme="apple-minimal"] .btn-ghost::after { content: " ›"; }
+
+    /* ========== THEME: minimal-clean ========== */
+    [data-theme="minimal-clean"] {
+      --bg: #fafafa; --surface: #ffffff; --text: #18181b; --text-secondary: #71717a;
+      --border-color: #e4e4e7; --accent: #18181b; --accent-hover: #27272a; --focus: #18181b;
+      --font: system-ui, -apple-system, "Segoe UI", "PingFang SC", sans-serif;
+      --font-mono: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
+      --maxw: 1120px; --prose-max: 680px; --hero-pad: 3.5rem 0 2rem; --section-mt: 5rem;
+      --h1-size: clamp(36px, 6vw, 64px); --h1-weight: 650; --h1-track: -0.03em;
+      --body-size: 15.5px; --card-bg: #fff; --card-border: 1px solid #e4e4e7; --card-radius: 10px;
+      --card-shadow: 0 1px 2px rgba(0,0,0,.04); --card-hover-border: #a1a1aa;
+      --btn-radius: 8px; --btn-pad: 10px 20px; --badge-bg: #f4f4f5; --badge-radius: 6px;
+      --nav-bg: #fff; --nav-border: 1px solid #e4e4e7; --code-bg: #fff; --code-fg: #18181b;
+      --code-border: 1px solid #e4e4e7; --code-radius: 8px; --code-btn-border: #e4e4e7;
+      --code-btn-bg: #fafafa; --code-btn-fg: #52525b; --chip-active-bg: #18181b;
+      --style-item-border: 1px solid #e4e4e7; --style-item-bg: #fff; --style-item-active-bg: #f4f4f5;
+    }
+
+    /* ========== THEME: tech-futuristic ========== */
+    [data-theme="tech-futuristic"] {
+      --bg: #0a0a0f; --bg-alt: #101018; --surface: rgba(255,255,255,.03); --text: #ededf2;
+      --text-secondary: #9b9ba6; --border-color: rgba(255,255,255,.08); --accent: #5b8cff;
+      --accent-hover: #7aa3ff; --accent-glow: rgba(91,140,255,.35); --focus: #5b8cff;
+      --font: system-ui, -apple-system, "Segoe UI", "PingFang SC", sans-serif;
+      --font-mono: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
+      --maxw: 1100px; --hero-pad: 3.5rem 0 2rem;
+      --h1-size: clamp(40px, 7vw, 76px); --h1-weight: 600; --h1-track: -0.02em;
+      --h1-bg: linear-gradient(180deg, #fff, #9b9ba6); --h1-clip: text; --h1-fill: transparent; --h1-color: transparent;
+      --btn-bg: #5b8cff; --btn-shadow: 0 0 40px rgba(91,140,255,.35); --btn-radius: 8px;
+      --btn-ghost-border: 1px solid rgba(255,255,255,.16); --btn-ghost-fg: #ededf2;
+      --card-bg: rgba(255,255,255,.03); --card-border: 1px solid rgba(255,255,255,.08);
+      --card-radius: 12px; --card-blur: blur(8px); --card-hover-border: rgba(91,140,255,.45);
+      --card-hover-transform: translateY(-2px); --nav-bg: rgba(10,10,15,.7); --nav-blur: blur(12px);
+      --nav-border: 1px solid rgba(255,255,255,.08); --code-bg: #101018; --code-fg: #ededf2;
+      --code-border: 1px solid rgba(255,255,255,.08); --code-radius: 12px;
+      --badge-bg: rgba(255,255,255,.06); --badge-border: 1px solid rgba(255,255,255,.1); --badge-radius: 6px;
+      --chip-bg: rgba(255,255,255,.04); --chip-border: 1px solid rgba(255,255,255,.1);
+      --chip-active-bg: #5b8cff; --chip-active-shadow: 0 0 20px rgba(91,140,255,.35);
+      --grid-line: rgba(255,255,255,.04);
+    }
+    [data-theme="tech-futuristic"] .fx-grid { display: block; }
+    [data-theme="tech-futuristic"] .hud-row { display: flex; }
+
+    /* ========== THEME: cyberpunk-neon ========== */
+    [data-theme="cyberpunk-neon"] {
+      --bg: #0d0221; --bg-alt: #1a0533; --surface: rgba(5,1,13,.85); --text: #f0e6ff;
+      --text-secondary: #a08fc0; --accent: #05d9e8; --accent-hover: #ff2a6d; --focus: #05d9e8;
+      --border-color: rgba(5,217,232,.35); --warn: #f9f002;
+      --font: system-ui, "Segoe UI", "PingFang SC", sans-serif;
+      --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+      --maxw: 1000px; --hero-pad: 3rem 0;
+      --h1-size: clamp(36px, 8vw, 84px); --h1-weight: 800; --h1-track: .05em;
+      --h1-transform: uppercase; --h1-color: #05d9e8;
+      --h1-shadow: 0 0 10px #05d9e8, 0 0 40px rgba(5,217,232,.45);
+      --btn-bg: transparent; --btn-fg: #05d9e8; --btn-border: 1px solid #05d9e8;
+      --btn-radius: 0; --btn-clip: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+      --btn-hover-bg: #05d9e8; --btn-hover-fg: #05010d;
+      --btn-ghost-fg: #ff2a6d; --btn-ghost-border: 1px solid #ff2a6d; --btn-ghost-hover-bg: #ff2a6d; --btn-ghost-hover-fg: #05010d;
+      --card-bg: rgba(5,1,13,.7); --card-border: 1px solid #05d9e8; --card-radius: 0;
+      --card-clip: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+      --card-hover-border: #ff2a6d; --card-shadow: 0 0 18px rgba(5,217,232,.2);
+      --nav-bg: rgba(13,2,33,.85); --nav-border: 1px solid rgba(5,217,232,.25);
+      --code-bg: #05010d; --code-fg: #0aff9d; --code-radius: 0; --code-border: 1px solid rgba(10,255,157,.3);
+      --code-prefix: #f9f002; --badge-bg: #f9f002; --badge-fg: #05010d; --badge-radius: 0;
+      --badge-transform: uppercase; --chip-radius: 0; --chip-border: 1px solid #05d9e8; --chip-fg: #05d9e8;
+      --chip-active-bg: #ff2a6d; --chip-active-fg: #fff; --chip-active-border: #ff2a6d;
+      --link: #05d9e8; --link-hover: #ff2a6d; --h2-transform: uppercase; --h2-track: .04em;
+    }
+    [data-theme="cyberpunk-neon"] .fx-scanlines { display: block; opacity: .18; background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,.03) 2px, rgba(255,255,255,.03) 4px); }
+    [data-theme="cyberpunk-neon"] .fx-grid { display: block; --grid-line: rgba(181,55,242,.12); }
+    [data-theme="cyberpunk-neon"] .topnav .brand { color: #ff2a6d; text-shadow: 0 0 12px #ff2a6d; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: .08em; }
+    [data-theme="cyberpunk-neon"] a:hover { text-shadow: 0 0 8px currentColor; }
+
+    /* ========== THEME: gaming-arcade ========== */
+    [data-theme="gaming-arcade"] {
+      --bg: #1a1a2e; --bg-alt: #16213e; --surface: #0f3460; --text: #eaeaea;
+      --text-secondary: #a8b2d1; --accent: #e94560; --accent-hover: #ff6b81; --focus: #ffd23f;
+      --border-color: #000; --p2: #ffd23f; --p3: #3ddc84;
+      --font: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, "Courier New", monospace;
+      --font-mono: ui-monospace, Menlo, Monaco, Consolas, monospace;
+      --maxw: 960px; --body-size: 16px; --hero-pad: 2.5rem 0;
+      --h1-size: clamp(22px, 5vw, 42px); --h1-weight: 700; --h1-lh: 1.45;
+      --h1-shadow: 4px 4px 0 #000; --h1-transform: uppercase; --h1-track: .02em;
+      --btn-bg: #e94560; --btn-fg: #fff; --btn-border: 4px solid #000; --btn-radius: 0;
+      --btn-shadow: 6px 6px 0 rgba(0,0,0,.45); --btn-pad: .7rem 1rem; --btn-size: 13px;
+      --btn-transform: uppercase; --btn-hover-transform: translate(-2px,-2px);
+      --btn-hover-shadow: 8px 8px 0 rgba(0,0,0,.45); --btn-hover-bg: #e94560;
+      --btn-ghost-bg: #ffd23f; --btn-ghost-fg: #000; --btn-ghost-border: 4px solid #000;
+      --btn-ghost-hover-bg: #ffe066; --btn-ghost-hover-fg: #000;
+      --card-bg: #0f3460; --card-border: 4px solid #000; --card-radius: 0;
+      --card-shadow: 8px 8px 0 rgba(0,0,0,.4); --card-hover-transform: translate(-2px,-2px);
+      --card-hover-shadow: 10px 10px 0 rgba(0,0,0,.4); --nav-bg: #16213e;
+      --nav-border: 4px solid #000; --code-bg: #000; --code-fg: #3ddc84; --code-radius: 0;
+      --code-border: 4px solid #000; --badge-bg: #ffd23f; --badge-fg: #000; --badge-radius: 0;
+      --badge-border: 3px solid #000; --badge-transform: uppercase; --chip-radius: 0;
+      --chip-border: 3px solid #000; --chip-bg: #0f3460; --chip-active-bg: #e94560;
+      --chip-active-border: #000; --chip-active-shadow: 3px 3px 0 #000;
+      --style-prefix: "▶ "; --step-prefix: "▶ "; --feature-prefix: "★ ";
+      --h2-transform: uppercase; --section-label-size: 11px;
+    }
+    [data-theme="gaming-arcade"] .feature-grid li { border-top: 6px solid #e94560; }
+    [data-theme="gaming-arcade"] .feature-grid li:nth-child(2) { border-top-color: #ffd23f; }
+    [data-theme="gaming-arcade"] .feature-grid li:nth-child(3) { border-top-color: #3ddc84; }
+    [data-theme="gaming-arcade"] .feature-grid li:nth-child(4) { border-top-color: #e94560; }
+    [data-theme="gaming-arcade"] .feature-grid li:nth-child(5) { border-top-color: #ffd23f; }
+    [data-theme="gaming-arcade"] .feature-grid li:nth-child(6) { border-top-color: #3ddc84; }
+    [data-theme="gaming-arcade"] .section-label::before { content: "STAGE "; }
+    [data-theme="gaming-arcade"] .hud-row { display: flex; }
+    [data-theme="gaming-arcade"] .hud-row strong { text-shadow: 2px 2px 0 #000; color: #ffd23f; }
+
+    /* ========== THEME: glassmorphism ========== */
+    [data-theme="glassmorphism"] {
+      --bg: #0f0f1a; --text: #ffffff; --text-secondary: rgba(255,255,255,.65);
+      --glass: rgba(255,255,255,.08); --border-color: rgba(255,255,255,.15);
+      --accent: #7c6cff; --accent-hover: #4ecdc4; --focus: #7c6cff;
+      --font: system-ui, -apple-system, "Segoe UI", "PingFang SC", sans-serif;
+      --font-mono: ui-monospace, Menlo, Monaco, Consolas, monospace;
+      --maxw: 1080px; --hero-align: center; --hero-justify: center;
+      --hero-center-ml: auto; --hero-center-mr: auto; --hero-text-max: 820px; --hero-pad: 4rem 0 3rem;
+      --h1-size: clamp(40px, 7vw, 72px); --h1-weight: 700; --h1-track: -0.02em;
+      --h1-bg: linear-gradient(90deg, #7c6cff, #4ecdc4); --h1-clip: text; --h1-fill: transparent; --h1-color: transparent;
+      --btn-bg: rgba(255,255,255,.1); --btn-fg: #fff; --btn-border: 1px solid rgba(255,255,255,.28);
+      --btn-radius: 14px; --btn-hover-bg: rgba(255,255,255,.18);
+      --btn-ghost-bg: rgba(255,255,255,.06); --btn-ghost-fg: #fff; --btn-ghost-border: 1px solid rgba(255,255,255,.15);
+      --card-bg: rgba(255,255,255,.08); --card-border: 1px solid rgba(255,255,255,.15);
+      --card-radius: 20px; --card-blur: blur(20px); --card-hover-bg: rgba(255,255,255,.12);
+      --nav-bg: rgba(255,255,255,.08); --nav-blur: blur(20px); --nav-border: 1px solid rgba(255,255,255,.12);
+      --code-bg: rgba(0,0,0,.4); --code-fg: #e8e8f0; --code-radius: 16px; --code-blur: blur(12px);
+      --code-border: 1px solid rgba(255,255,255,.12); --badge-bg: rgba(255,255,255,.1);
+      --badge-border: 1px solid rgba(255,255,255,.15); --chip-bg: rgba(255,255,255,.06);
+      --chip-border: 1px solid rgba(255,255,255,.15); --chip-active-bg: linear-gradient(90deg,#7c6cff,#4ecdc4);
+      --chip-active-bg: #7c6cff; --chip-radius: 999px; --style-item-bg: rgba(255,255,255,.06);
+      --style-item-border: 1px solid rgba(255,255,255,.12); --style-item-active-bg: rgba(124,108,255,.25);
+    }
+    [data-theme="glassmorphism"] .fx-blobs { display: block; }
+    [data-theme="glassmorphism"] .hero, [data-theme="glassmorphism"] .topnav {
+      background: rgba(255,255,255,.08); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,.15); border-radius: 20px;
+    }
+    [data-theme="glassmorphism"] .hero { padding: 2.5rem 1.5rem; margin-top: 1.5rem; }
+    [data-theme="glassmorphism"] .topnav { margin: .75rem auto 0; max-width: calc(var(--maxw) - 0px); }
+    [data-theme="glassmorphism"] .switcher {
+      background: rgba(15,15,26,.65); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    }
+    @supports not (backdrop-filter: blur(1px)) {
+      [data-theme="glassmorphism"] .feature-grid li,
+      [data-theme="glassmorphism"] .hero,
+      [data-theme="glassmorphism"] .topnav { background: rgba(30,30,50,.92); }
+    }
+
+    /* ========== THEME: brutalist ========== */
+    [data-theme="brutalist"] {
+      --bg: #fffdf5; --surface: #ffffff; --text: #000000; --text-secondary: #222;
+      --accent: #ff6b35; --accent-hover: #004aad; --focus: #000;
+      --border-color: #000; --font: system-ui, "Segoe UI", "PingFang SC", sans-serif;
+      --font-mono: ui-monospace, Menlo, Consolas, monospace;
+      --maxw: 1000px; --hero-pad: 2rem 0 1rem;
+      --h1-size: clamp(40px, 8vw, 84px); --h1-weight: 900; --h1-lh: 1.0; --h1-transform: uppercase;
+      --h1-track: -0.01em; --body-size: 17px; --body-lh: 1.5;
+      --btn-bg: #ff6b35; --btn-fg: #000; --btn-border: 3px solid #000; --btn-radius: 0;
+      --btn-shadow: 6px 6px 0 #000; --btn-transform: uppercase; --btn-weight: 800;
+      --btn-hover-transform: translate(6px,6px); --btn-hover-shadow: 0 0 0 #000; --btn-hover-bg: #ff6b35; --btn-hover-fg: #000;
+      --btn-ghost-bg: #fff; --btn-ghost-fg: #000; --btn-ghost-border: 3px solid #000;
+      --btn-ghost-hover-bg: #004aad; --btn-ghost-hover-fg: #fff;
+      --card-bg: #fff; --card-border: 3px solid #000; --card-radius: 0; --card-shadow: 6px 6px 0 #000;
+      --card-hover-transform: translate(6px,6px); --card-hover-shadow: 0 0 0 #000;
+      --nav-bg: #fff; --nav-border: 3px solid #000; --code-bg: #000; --code-fg: #fff; --code-radius: 0;
+      --code-border: 4px dashed #fff; --badge-bg: #ff6b35; --badge-fg: #000; --badge-border: 3px solid #000;
+      --badge-radius: 0; --badge-transform: uppercase; --chip-radius: 0; --chip-border: 3px solid #000;
+      --chip-bg: #fff; --chip-active-bg: #ff6b35; --chip-active-fg: #000; --chip-active-border: #000;
+      --chip-active-shadow: 3px 3px 0 #000; --h2-transform: uppercase; --h2-weight: 900;
+      --section-label-size: 12px; --style-item-border: 3px solid #000; --style-item-bg: #fff;
+      --style-item-active-bg: #ff6b35;
+    }
+    [data-theme="brutalist"] .fx-marquee { display: block; }
+    [data-theme="brutalist"] .feature-grid li:nth-child(3n+2) { background: #ff6b35; color: #000; }
+    [data-theme="brutalist"] .feature-grid li:nth-child(3n+2) .desc,
+    [data-theme="brutalist"] .feature-grid li:nth-child(3n+2) .key { color: #000; }
+    [data-theme="brutalist"] .feature-grid li:nth-child(3n) { background: #004aad; }
+    [data-theme="brutalist"] .feature-grid li:nth-child(3n) .desc,
+    [data-theme="brutalist"] .feature-grid li:nth-child(3n) .key { color: #fff; }
+    [data-theme="brutalist"] .badge { transform: rotate(-3deg); }
+    [data-theme="brutalist"] .hero h1 span.hl { background: #ff6b35; padding: 0 .15em; display: inline; }
+
+    /* ========== THEME: terminal-hacker ========== */
+    [data-theme="terminal-hacker"] {
+      --bg: #0a0e0a; --bg-alt: #050805; --surface: #0d120d; --text: #00ff41;
+      --text-dim: #00b32d; --text-secondary: #3fae5a; --warn: #ffb000; --err: #ff3e3e;
+      --accent: #00ff41; --accent-hover: #00ff41; --focus: #00ff41;
+      --border-color: #00ff4133; --font: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --font-mono: inherit; --maxw: 880px; --body-size: 15px; --body-lh: 1.8;
+      --hero-mt: 1.5rem; --hero-pad: 1.25rem 1.25rem 1.5rem; --hero-bg: #0d120d;
+      --hero-border: 1px solid #00ff4133; --h1-size: clamp(20px, 3.5vw, 32px); --h1-weight: 700; --h1-lh: 1.8; --h1-track: 0;
+      --tagline-size: 15px; --btn-bg: #0a0e0a; --btn-fg: #00ff41; --btn-border: 1px solid #00ff41;
+      --btn-radius: 0; --btn-pad: .35rem .85rem; --btn-hover-bg: #00ff41; --btn-hover-fg: #0a0e0a;
+      --btn-ghost-fg: #00b32d; --btn-ghost-border: 1px solid #00b32d; --btn-ghost-hover-bg: #00ff41; --btn-ghost-hover-fg: #0a0e0a;
+      --card-bg: transparent; --card-border: none; --card-radius: 0; --card-pad: .15rem 0;
+      --card-gap: .35rem 1rem; --feature-prefix: "[✓] "; --nav-bg: #050805; --nav-border: 1px solid #00ff4133;
+      --code-bg: #050805; --code-fg: #00ff41; --code-border: 1px solid #00ff4133; --code-radius: 0;
+      --code-prefix: #ffb000; --code-btn-border: #00b32d; --code-btn-bg: #0a0e0a; --code-btn-fg: #00b32d;
+      --badge-bg: transparent; --badge-fg: #ffb000; --badge-border: 1px solid #ffb000; --badge-radius: 0;
+      --badge-transform: none; --chip-radius: 0; --chip-border: 1px solid #00ff4133; --chip-fg: #00b32d;
+      --chip-active-bg: #00ff41; --chip-active-fg: #0a0e0a; --chip-active-border: #00ff41;
+      --style-prefix: "$ "; --step-prefix: "> "; --link: #00ff41; --section-mt: 2rem;
+      --section-label-size: 14px; --h2-size: 14px; --h2-weight: 700; --h2-track: 0;
+      --brand-size: 13px; --footer-border: 1px solid #00ff4133;
+    }
+    [data-theme="terminal-hacker"] .fx-scanlines { display: block; }
+    [data-theme="terminal-hacker"] .ascii { display: block; }
+    [data-theme="terminal-hacker"] .prompt-line { display: block; }
+    [data-theme="terminal-hacker"] .section-rule { display: block; }
+    [data-theme="terminal-hacker"] .section-label { color: #00ff41; text-transform: none; letter-spacing: 0; font-weight: 700; }
+    [data-theme="terminal-hacker"] .section-title { display: none; }
+    [data-theme="terminal-hacker"] .feature-grid { grid-template-columns: 1fr; }
+    [data-theme="terminal-hacker"] .feature-grid li {
+      display: grid; grid-template-columns: minmax(9rem, 14rem) 1fr; gap: .5rem 1rem; padding: .2rem 0;
+    }
+    [data-theme="terminal-hacker"] .feature-grid .key { margin: 0; color: #00ff41; }
+    [data-theme="terminal-hacker"] .feature-grid .desc { font-size: 15px; }
+    [data-theme="terminal-hacker"] .topnav .brand { color: #00ff41; }
+    [data-theme="terminal-hacker"] .topnav nav a { color: #00b32d; }
+    [data-theme="terminal-hacker"] .topnav nav a:hover { background: #00ff41; color: #0a0e0a; }
+    [data-theme="terminal-hacker"] a:hover { background: #00ff41; color: #0a0e0a; }
+    [data-theme="terminal-hacker"] .hero h1.sr-only-term {
+      position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+      clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+    }
+    [data-theme="terminal-hacker"] .hero .vis-title {
+      display: block; color: #00ff41; font-size: clamp(20px, 3.5vw, 32px); font-weight: 700; margin: .5rem 0 .25rem;
+    }
+    [data-theme="terminal-hacker"] .hero .tagline { display: none; }
+    [data-theme="terminal-hacker"] .copy-btn:hover { background: #00ff41; color: #0a0e0a; border-color: #00ff41; }
+    @media (max-width: 560px) {
+      [data-theme="terminal-hacker"] .feature-grid li { grid-template-columns: 1fr; gap: .1rem; }
+    }
+
+    /* Non-terminal: hide terminal-only chrome */
+    html:not([data-theme="terminal-hacker"]) .vis-title { display: none; }
+    html:not([data-theme="terminal-hacker"]) .hero h1.sr-only-term {
+      position: static; width: auto; height: auto; margin: 0 0 .5rem; clip: auto; overflow: visible; white-space: normal;
+    }
+    [data-theme="brutalist"] .hero h1.sr-only-term { text-transform: uppercase; }
+
+
+    .label-term { display: none; }
+    .label-clean { display: inline; }
+    [data-theme="terminal-hacker"] .label-term { display: inline; }
+    [data-theme="terminal-hacker"] .label-clean { display: none; }
+
+    .cursor {
+      display: none; width: .6ch; background: var(--text); animation: blink .8s steps(2) infinite;
+      vertical-align: text-bottom; height: 1.1em;
+    }
+    [data-theme="terminal-hacker"] .cursor { display: inline-block; }
+    @keyframes blink { 50% { opacity: 0; } }
   </style>
 </head>
 <body>
-  <div class="scanlines" aria-hidden="true"></div>
+  <div class="fx-blobs" aria-hidden="true"><span></span><span></span><span></span></div>
+  <div class="fx-grid" aria-hidden="true"></div>
+  <div class="fx-scanlines" aria-hidden="true"></div>
 
-  <div class="statusbar">
-    <div class="statusbar-inner">
-      <span class="brand">repo-showcase</span>
-      <span class="sep">|</span>
-      <span>[MIT]</span>
-      <span class="sep">|</span>
-      <nav aria-label="Primary navigation">
-        <a href="#features">[features]</a>
-        <a href="#styles">[styles]</a>
-        <a href="#install">[install]</a>
-        <a href="#use">[use]</a>
-        <a href="#verify">[verify]</a>
-        <a href="https://github.com/wajuejinajia/repo-showcase">[github]</a>
-      </nav>
+  <div class="switcher" role="region" aria-label="Style previewer">
+    <div class="switcher-inner">
+      <span class="switcher-label" id="style-switcher-label">Style</span>
+      <div class="switcher-tabs" role="tablist" aria-labelledby="style-switcher-label">
+        <button type="button" role="tab" id="apple-minimal" data-theme-id="apple-minimal" aria-pressed="false">apple-minimal</button>
+        <button type="button" role="tab" id="minimal-clean" data-theme-id="minimal-clean" aria-pressed="false">minimal-clean</button>
+        <button type="button" role="tab" id="tech-futuristic" data-theme-id="tech-futuristic" aria-pressed="false">tech-futuristic</button>
+        <button type="button" role="tab" id="cyberpunk-neon" data-theme-id="cyberpunk-neon" aria-pressed="false">cyberpunk-neon</button>
+        <button type="button" role="tab" id="gaming-arcade" data-theme-id="gaming-arcade" aria-pressed="false">gaming-arcade</button>
+        <button type="button" role="tab" id="glassmorphism" data-theme-id="glassmorphism" aria-pressed="false">glassmorphism</button>
+        <button type="button" role="tab" id="brutalist" data-theme-id="brutalist" aria-pressed="false">brutalist</button>
+        <button type="button" role="tab" id="terminal-hacker" data-theme-id="terminal-hacker" aria-pressed="true">terminal-hacker</button>
+      </div>
+      <label class="switcher-label" for="style-select" style="position:absolute;left:-9999px">Choose style</label>
+      <select id="style-select" class="switcher-select" aria-label="Choose style">
+        <option value="apple-minimal">apple-minimal</option>
+        <option value="minimal-clean">minimal-clean</option>
+        <option value="tech-futuristic">tech-futuristic</option>
+        <option value="cyberpunk-neon">cyberpunk-neon</option>
+        <option value="gaming-arcade">gaming-arcade</option>
+        <option value="glassmorphism">glassmorphism</option>
+        <option value="brutalist">brutalist</option>
+        <option value="terminal-hacker" selected>terminal-hacker</option>
+      </select>
     </div>
+  </div>
+
+  <div class="fx-marquee" aria-hidden="true"><div>REPO-SHOWCASE&nbsp;&nbsp;·&nbsp;&nbsp;SOURCE-BACKED&nbsp;&nbsp;·&nbsp;&nbsp;8 STYLES&nbsp;&nbsp;·&nbsp;&nbsp;STATIC HTML&nbsp;&nbsp;·&nbsp;&nbsp;NO CDN&nbsp;&nbsp;·&nbsp;&nbsp;REPO-SHOWCASE&nbsp;&nbsp;·&nbsp;&nbsp;SOURCE-BACKED&nbsp;&nbsp;·&nbsp;&nbsp;8 STYLES&nbsp;&nbsp;·&nbsp;&nbsp;STATIC HTML&nbsp;&nbsp;·&nbsp;&nbsp;NO CDN&nbsp;&nbsp;·&nbsp;&nbsp;</div></div>
+
+  <div class="topnav">
+    <span class="brand">repo-showcase</span>
+    <nav aria-label="Primary navigation">
+      <a href="#features" data-scroll>features</a>
+      <a href="#styles" data-scroll>styles</a>
+      <a href="#install" data-scroll>install</a>
+      <a href="#use" data-scroll>use</a>
+      <a href="#verify" data-scroll>verify</a>
+      <a href="https://github.com/wajuejinajia/repo-showcase">github</a>
+    </nav>
   </div>
 
   <div class="wrap">
     <main>
-      <header class="hero term" id="top">
-        <h1>repo-showcase</h1>
+      <header class="hero" id="top">
+        <h1 class="sr-only-term">repo-showcase</h1>
         <pre class="ascii" aria-hidden="true">
  ____  _____ ____   ___        ____  _   _  _____        __ ____  _    ____ _____
 |  _ \| ____|  _ \ / _ \      / ___|| | | |/ _ \ \      / // ___|| |  / ___| ____|
@@ -293,88 +796,99 @@
 |  _ &lt;| |___|  __/| |_| |_____|___) |  _  | |_| |\ V  V /   ___) | | | |___| |___
 |_| \_\_____|_|    \___/      |____/|_| |_|\___/  \_/\_/   |____/|_|  \____|_____|
         </pre>
-        <p class="prompt-line"><span class="ps">$</span> whoami</p>
-        <p class="hero-title">repo-showcase — source-backed project websites</p>
-        <p class="output-line">Agent Skill that turns a code repository into a style-led static showcase. Claims stay tied to repository sources; output is dependency-free HTML suitable for a homepage or GitHub Pages.</p>
+        <p class="prompt-line"><span class="ps">$</span> whoami<span class="cursor" aria-hidden="true"></span></p>
+        <p class="vis-title">repo-showcase — source-backed project websites</p>
+        <p class="tagline">Source-backed project websites, eight visual systems.</p>
+        <p class="lede">Agent Skill that turns a code repository into a style-led static showcase. Claims stay tied to repository sources; output is dependency-free HTML suitable for a homepage or GitHub Pages.</p>
         <div class="badges" aria-label="Project badges">
-          <span class="badge">[AGENT SKILL]</span>
-          <span class="badge">[STATIC HTML]</span>
-          <span class="badge">[MIT]</span>
-          <span class="badge">[BASH + PYTHON 3]</span>
+          <span class="badge">AGENT SKILL</span>
+          <span class="badge">STATIC HTML</span>
+          <span class="badge">MIT</span>
+          <span class="badge">BASH + PYTHON 3</span>
         </div>
         <div class="cta-row">
-          <a class="btn" href="#install">[ install ]</a>
-          <a class="btn btn-ghost" href="https://github.com/wajuejinajia/repo-showcase">[ github ]</a>
+          <a class="btn" href="#install" data-scroll>Install</a>
+          <a class="btn btn-ghost" href="https://github.com/wajuejinajia/repo-showcase">GitHub</a>
+        </div>
+        <div class="hud-row" aria-label="Project metrics">
+          <div><strong>8</strong> visual styles</div>
+          <div><strong>0</strong> build step</div>
+          <div><strong>150KB</strong> size budget</div>
+          <div><strong>MIT</strong> license</div>
         </div>
       </header>
 
-      <section id="features" class="line-print" aria-labelledby="features-head">
-        <p class="section-head" id="features-head">┌── [SECTION 01] FEATURES ──┐</p>
-        <p class="hr">────────────────────────────────────────</p>
-        <ul class="feature-list">
+      <section id="features" class="reveal" aria-labelledby="features-head">
+        <p class="section-label" id="features-head"><span class="label-clean">Features</span><span class="label-term">┌── [SECTION 01] FEATURES ──┐</span></p>
+        <h2 class="section-title">Built for honest showcases</h2>
+        <p class="section-rule">────────────────────────────────────────</p>
+        <ul class="feature-grid">
           <li>
             <span class="key">source-backed</span>
-            <span>Every public claim maps to a repository file and line, or is omitted.</span>
+            <p class="desc">Every public claim maps to a repository file and line, or is omitted.</p>
           </li>
           <li>
             <span class="key">portable output</span>
-            <span>Inline CSS/JS, system fonts, local assets — no build step or CDN by default.</span>
+            <p class="desc">Inline CSS/JS, system fonts, local assets — no build step or CDN by default.</p>
           </li>
           <li>
             <span class="key">8 visual systems</span>
-            <span>Styles define typography, layout, motion, and constraints — not only colors.</span>
+            <p class="desc">Styles define typography, layout, motion, and constraints — not only colors.</p>
           </li>
           <li>
             <span class="key">honest checks</span>
-            <span>validate-site.py enforces structure, size, placeholders, and local resources.</span>
+            <p class="desc">validate-site.py enforces structure, size, placeholders, and local resources.</p>
           </li>
           <li>
             <span class="key">optional multi-page</span>
-            <span>showcase-docs and showcase-guide-demo add static Docs, Guide, and/or Demo routes.</span>
+            <p class="desc">showcase-docs and showcase-guide-demo add static Docs, Guide, and/or Demo routes.</p>
           </li>
           <li>
             <span class="key">explicit publishing</span>
-            <span>Deployment and remote changes happen only when requested.</span>
+            <p class="desc">Deployment and remote changes happen only when requested.</p>
           </li>
         </ul>
       </section>
 
-      <section id="styles" class="line-print" aria-labelledby="styles-head">
-        <p class="section-head" id="styles-head">┌── [SECTION 02] STYLES ──┐</p>
-        <p class="hr">────────────────────────────────────────</p>
+      <section id="styles" class="reveal" aria-labelledby="styles-head">
+        <p class="section-label" id="styles-head"><span class="label-clean">Styles</span><span class="label-term">┌── [SECTION 02] STYLES ──┐</span></p>
+        <h2 class="section-title">Eight visual systems</h2>
+        <p class="section-rule">────────────────────────────────────────</p>
         <p class="prompt-line"><span class="ps">$</span> ls styles/</p>
-        <ul class="styles-grid">
-          <li>apple-minimal — products &amp; design tools</li>
-          <li>minimal-clean — libraries &amp; frameworks</li>
-          <li>tech-futuristic — AI, infra, performance</li>
-          <li>cyberpunk-neon — high-impact creative</li>
-          <li>gaming-arcade — games &amp; playful work</li>
-          <li>glassmorphism — apps &amp; design systems</li>
-          <li>brutalist — expressive brands</li>
-          <li>terminal-hacker — CLIs &amp; developer tools</li>
+        <ul class="styles-grid" id="styles-list">
+          <li data-style-item="apple-minimal">apple-minimal — products &amp; design tools</li>
+          <li data-style-item="minimal-clean">minimal-clean — libraries &amp; frameworks</li>
+          <li data-style-item="tech-futuristic">tech-futuristic — AI, infra, performance</li>
+          <li data-style-item="cyberpunk-neon">cyberpunk-neon — high-impact creative</li>
+          <li data-style-item="gaming-arcade">gaming-arcade — games &amp; playful work</li>
+          <li data-style-item="glassmorphism">glassmorphism — apps &amp; design systems</li>
+          <li data-style-item="brutalist">brutalist — expressive brands</li>
+          <li data-style-item="terminal-hacker">terminal-hacker — CLIs &amp; developer tools</li>
         </ul>
-        <p class="output-line" style="margin-top:0.75rem">This dogfood page uses <span style="color:var(--text)">terminal-hacker</span>.</p>
+        <p class="note">Previewing <strong id="active-style-name">terminal-hacker</strong>. Use the style switcher above — no full page reload.</p>
       </section>
 
-      <section id="install" class="line-print" aria-labelledby="install-head">
-        <p class="section-head" id="install-head">┌── [SECTION 03] INSTALL ──┐</p>
-        <p class="hr">────────────────────────────────────────</p>
-        <p class="output-line">Clone into the skills directory your agent supports:</p>
+      <section id="install" class="reveal" aria-labelledby="install-head">
+        <p class="section-label" id="install-head"><span class="label-clean">Install</span><span class="label-term">┌── [SECTION 03] INSTALL ──┐</span></p>
+        <h2 class="section-title">Add the skill</h2>
+        <p class="section-rule">────────────────────────────────────────</p>
+        <p class="lede" style="margin-bottom:.5rem">Clone into the skills directory your agent supports:</p>
         <div class="codeblock">
-          <button type="button" class="copy-btn" data-copy="#install-cmd">[COPY]</button>
+          <button type="button" class="copy-btn" data-copy="#install-cmd">COPY</button>
           <pre id="install-cmd"><span class="prefix">$</span> git clone https://github.com/wajuejinajia/repo-showcase .agents/skills/repo-showcase
 <span class="prefix">$</span> git clone https://github.com/wajuejinajia/repo-showcase .claude/skills/repo-showcase
 <span class="prefix">$</span> git clone https://github.com/wajuejinajia/repo-showcase .opencode/skills/repo-showcase</pre>
         </div>
-        <p class="output-line">Runtime for deterministic checks: Bash and Python 3. No Node modules required.</p>
+        <p class="note">Runtime for deterministic checks: Bash and Python 3. No Node modules required.</p>
       </section>
 
-      <section id="use" class="line-print" aria-labelledby="use-head">
-        <p class="section-head" id="use-head">┌── [SECTION 04] USE ──┐</p>
-        <p class="hr">────────────────────────────────────────</p>
+      <section id="use" class="reveal" aria-labelledby="use-head">
+        <p class="section-label" id="use-head"><span class="label-clean">Use</span><span class="label-term">┌── [SECTION 04] USE ──┐</span></p>
+        <h2 class="section-title">Ask your agent</h2>
+        <p class="section-rule">────────────────────────────────────────</p>
         <p class="prompt-line"><span class="ps">$</span> cat &lt;&lt;'PROMPT'</p>
         <div class="codeblock">
-          <button type="button" class="copy-btn" data-copy="#use-cmd">[COPY]</button>
+          <button type="button" class="copy-btn" data-copy="#use-cmd">COPY</button>
           <pre id="use-cmd">Build a project showcase site for this repository. Recommend a style first.
 
 Create a project homepage in tech-futuristic style and verify it locally. Do not deploy it.
@@ -382,7 +896,6 @@ Create a project homepage in tech-futuristic style and verify it locally. Do not
 Use repo-showcase in showcase-guide-demo mode. Create the homepage, a guide
 quick-start page, and a demo page from the repository's real examples.</pre>
         </div>
-        <p class="prompt-line"><span class="ps">$</span> # workflow</p>
         <ol class="steps">
           <li>bash scripts/analyze-repo.sh &lt;target-repo&gt;  →  .repo-showcase/facts.json</li>
           <li>Choose a style from styles/*.md; start from templates/base.html</li>
@@ -391,16 +904,17 @@ quick-start page, and a demo page from the repository's real examples.</pre>
         </ol>
       </section>
 
-      <section id="verify" class="line-print" aria-labelledby="verify-head">
-        <p class="section-head" id="verify-head">┌── [SECTION 05] VERIFY ──┐</p>
-        <p class="hr">────────────────────────────────────────</p>
+      <section id="verify" class="reveal" aria-labelledby="verify-head">
+        <p class="section-label" id="verify-head"><span class="label-clean">Verify</span><span class="label-term">┌── [SECTION 05] VERIFY ──┐</span></p>
+        <h2 class="section-title">Check before handoff</h2>
+        <p class="section-rule">────────────────────────────────────────</p>
         <div class="codeblock">
-          <button type="button" class="copy-btn" data-copy="#verify-cmd">[COPY]</button>
+          <button type="button" class="copy-btn" data-copy="#verify-cmd">COPY</button>
           <pre id="verify-cmd"><span class="prefix">$</span> python3 scripts/validate-site.py site
 <span class="prefix">$</span> python3 scripts/validate-site.py site --all
 <span class="prefix">$</span> python3 -m http.server 8000 --directory site</pre>
         </div>
-        <p class="output-line">Smoke tests: <span style="color:var(--text)">bash tests/test_analyze_repo.sh</span> and <span style="color:var(--text)">bash tests/test_validate_site.sh</span>.</p>
+        <p class="note">Smoke tests: <strong>bash tests/test_analyze_repo.sh</strong> and <strong>bash tests/test_validate_site.sh</strong>.</p>
       </section>
     </main>
 
@@ -409,15 +923,95 @@ quick-start page, and a demo page from the repository's real examples.</pre>
       <p>MIT License · Copyright (c) 2026 Liam</p>
       <p>
         <a href="https://github.com/wajuejinajia/repo-showcase">github.com/wajuejinajia/repo-showcase</a>
-        <span class="sep"> · </span>
-        <a href="#top">[top]</a>
+        ·
+        <a href="#top" data-scroll>top</a>
       </p>
-      <p>Generated by dogfooding repo-showcase on itself · style: terminal-hacker</p>
+      <p>Dogfood demo · interactive style previewer · <span id="footer-style">terminal-hacker</span></p>
     </footer>
   </div>
 
   <script>
+    const STYLES = [
+      'apple-minimal', 'minimal-clean', 'tech-futuristic', 'cyberpunk-neon',
+      'gaming-arcade', 'glassmorphism', 'brutalist', 'terminal-hacker'
+    ];
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const root = document.documentElement;
+    const selectEl = document.getElementById('style-select');
+    const nameEl = document.getElementById('active-style-name');
+    const footerStyle = document.getElementById('footer-style');
+
+    function resolveStyle() {
+      const params = new URLSearchParams(location.search);
+      const fromQuery = params.get('style');
+      if (fromQuery && STYLES.includes(fromQuery)) return fromQuery;
+      const hash = location.hash.replace(/^#/, '');
+      if (hash && STYLES.includes(hash)) return hash;
+      return 'terminal-hacker';
+    }
+
+    function setTheme(name, pushHash) {
+      if (!STYLES.includes(name)) name = 'terminal-hacker';
+      root.setAttribute('data-theme', name);
+      document.querySelectorAll('.switcher-tabs button').forEach(btn => {
+        const on = btn.dataset.themeId === name;
+        btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      });
+      if (selectEl) selectEl.value = name;
+      if (nameEl) nameEl.textContent = name;
+      if (footerStyle) footerStyle.textContent = name;
+      document.querySelectorAll('[data-style-item]').forEach(li => {
+        li.classList.toggle('active-style', li.getAttribute('data-style-item') === name);
+      });
+      if (pushHash !== false) {
+        const url = new URL(location.href);
+        url.searchParams.set('style', name);
+        url.hash = name;
+        history.replaceState(null, '', url.pathname + url.search + '#' + name);
+      }
+      document.title = 'repo-showcase — ' + name;
+    }
+
+    document.querySelectorAll('.switcher-tabs button').forEach(btn => {
+      btn.addEventListener('click', () => setTheme(btn.dataset.themeId));
+    });
+    if (selectEl) selectEl.addEventListener('change', () => setTheme(selectEl.value));
+
+    document.querySelectorAll('[data-style-item]').forEach(li => {
+      li.style.cursor = 'pointer';
+      li.addEventListener('click', () => setTheme(li.getAttribute('data-style-item')));
+      li.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          setTheme(li.getAttribute('data-style-item'));
+        }
+      });
+      li.tabIndex = 0;
+      li.setAttribute('role', 'button');
+    });
+
+    document.querySelectorAll('[data-scroll]').forEach(link => {
+      link.addEventListener('click', e => {
+        const href = link.getAttribute('href') || '';
+        if (!href.startsWith('#')) return;
+        const id = href.slice(1);
+        const target = document.getElementById(id);
+        if (!target) return;
+        e.preventDefault();
+        target.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'start' });
+        const theme = root.getAttribute('data-theme');
+        const url = new URL(location.href);
+        url.searchParams.set('style', theme);
+        history.replaceState(null, '', url.pathname + url.search + '#' + theme);
+      });
+    });
+
+    window.addEventListener('hashchange', () => {
+      const hash = location.hash.replace(/^#/, '');
+      if (STYLES.includes(hash)) setTheme(hash, false);
+    });
+
+    setTheme(resolveStyle(), true);
 
     if (!reducedMotion && 'IntersectionObserver' in window) {
       const observer = new IntersectionObserver(entries => entries.forEach(entry => {
@@ -426,9 +1020,9 @@ quick-start page, and a demo page from the repository's real examples.</pre>
           observer.unobserve(entry.target);
         }
       }), { threshold: 0.12 });
-      document.querySelectorAll('.line-print').forEach(el => observer.observe(el));
+      document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
     } else {
-      document.querySelectorAll('.line-print').forEach(el => el.classList.add('visible'));
+      document.querySelectorAll('.reveal').forEach(el => el.classList.add('visible'));
     }
 
     async function copyText(text) {
@@ -454,19 +1048,27 @@ quick-start page, and a demo page from the repository's real examples.</pre>
       const source = document.querySelector(button.dataset.copy);
       if (!source) return;
       const original = button.textContent;
-      button.textContent = await copyText(source.textContent.trim()) ? '[OK]' : '[MANUAL]';
+      button.textContent = await copyText(source.textContent.trim()) ? 'OK' : 'MANUAL';
       setTimeout(() => { button.textContent = original; }, 1800);
     }));
 
-    // Title blink easter egg (skipped when reduced motion)
-    if (!reducedMotion) {
-      const base = document.title;
-      let tick = false;
-      setInterval(() => {
-        document.title = tick ? base : '█ ' + base;
-        tick = !tick;
-      }, 1200);
-    }
+    // Konami easter egg → gaming-arcade (style doc suggests it)
+    const konami = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
+    let kIndex = 0;
+    window.addEventListener('keydown', e => {
+      const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+      const expect = konami[kIndex];
+      const expectNorm = expect.length === 1 ? expect.toLowerCase() : expect;
+      if (key === expectNorm) {
+        kIndex += 1;
+        if (kIndex === konami.length) {
+          kIndex = 0;
+          setTheme('gaming-arcade');
+        }
+      } else {
+        kIndex = 0;
+      }
+    });
   </script>
 </body>
 </html>
